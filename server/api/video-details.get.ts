@@ -1,6 +1,7 @@
 import { VideoDetails } from "~~/types/youtube"
 import { getPlaylistVideos, getVideoDetails } from "../service/youtubeService"
-import { classifyLinks, extractUrls } from "~~/utils/helpers"
+import { classifyLinks, extractUrls } from "~~/utils/url"
+import { parseISO8601ToSeconds, getVideoType } from "~~/utils/duration"
 
 export default defineEventHandler(async (event) => {
     const { playlistId } = getQuery(event) as { playlistId: string }
@@ -30,16 +31,21 @@ export default defineEventHandler(async (event) => {
             detailedVideos.push(...details)
         }
 
-        const videoDetails: VideoDetails[] = detailedVideos.map(v => ({
-            id: v.id,
-            title: v.snippet.title,
-            description: v.snippet.description,
-            links: classifyLinks(v.snippet.description),
-            viewCount: parseInt(v.statistics.viewCount) || 0,
-            likeCount: parseInt(v.statistics.likeCount) || 0,
-            commentCount: parseInt(v.statistics.commentCount) || 0,
-            publishedAt: v.snippet.publishedAt
-        }))
+        const videoDetails: VideoDetails[] = detailedVideos
+            .map(v => ({
+                id: v.id,
+                title: v.snippet.title,
+                description: v.snippet.description,
+                links: classifyLinks(v.snippet.description),
+                viewCount: parseInt(v.statistics.viewCount) || 0,
+                likeCount: parseInt(v.statistics.likeCount) || 0,
+                commentCount: parseInt(v.statistics.commentCount) || 0,
+                duration: parseISO8601ToSeconds(v.contentDetails.duration),
+                type: getVideoType(v),
+                publishedAt: v.snippet.publishedAt,
+                hasPaidProductPlacement: v.paidProductPlacementDetails?.hasPaidProductPlacement ?? false
+            }))
+            .sort((a, b) => b.viewCount - a.viewCount)
 
         return {
             count: videoDetails.length,

@@ -1,22 +1,98 @@
 @import "tailwindcss";
 
 @theme {
-    --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-    --font-display: "Outfit", var(--font-sans);
-    --color-ink: #0f172a;
-    --color-muted: #64748b;
-    --color-surface: #f8fafc;
-    --color-paper: #ffffff;
-    --color-accent: #0ea5e9;
-    --color-accent-hover: #0284c7;
-    --color-success: #10b981;
-    --radius-card: 1rem;
-    --radius-button: 0.75rem;
-    --shadow-soft: 0 1px 3px rgb(0 0 0 / 0.06);
-    --shadow-card: 0 4px 24px -4px rgb(0 0 0 / 0.08);
+  /* Fonts */
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", var(--font-sans);
+
+  /* Radius */
+  --radius-card: 1rem;
+  --radius-button: 0.75rem;
+
+  /* Colors - backgrounds */
+  --color-page-bg: #0a0a0f;
+  --color-card-bg: rgba(255, 255, 255, 0.05);
+  --color-card-bg-attention: rgba(245, 158, 11, 0.05);
+  --color-thumb-bg: #27272a;
+
+  /* Colors - borders */
+  --color-border-default: rgba(255, 255, 255, 0.1);
+  --color-border-attention: rgba(245, 158, 11, 0.3);
+  --color-border-attention-strong: rgba(245, 158, 11, 0.6);
+  --color-hover-border: rgba(255, 255, 255, 0.2);
+
+  /* Colors - text */
+  --color-text-primary: #ffffff;
+  --color-text-muted: #a1a1aa;
+  --color-text-muted-strong: #71717a;
+
+  /* Colors - gradients (for from-/to-/via-) */
+  --color-hero-from: rgba(244, 63, 94, 0.1);
+  --color-hero-to: rgba(245, 158, 11, 0.1);
+  --color-title-from: #fb7185;
+  --color-title-via: #fbbf24;
+  --color-title-to: #fb7185;
+  --color-btn-from: #f43f5e;
+  --color-btn-to: #f59e0b;
+  --color-btn-hover-from: #fb7185;
+  --color-btn-hover-to: #fbbf24;
+
+  /* Colors - link categories */
+  --color-sponsor-bg: rgba(244, 63, 94, 0.3);
+  --color-sponsor-text: #fecdd3;
+  --color-sponsor-border: rgba(244, 63, 94, 0.5);
+  --color-sponsor-link: #fda4af;
+  --color-affiliate-bg: rgba(245, 158, 11, 0.3);
+  --color-affiliate-text: #fef3c7;
+  --color-affiliate-border: rgba(245, 158, 11, 0.5);
+  --color-affiliate-link: #fcd34d;
+  --color-merch-bg: rgba(16, 185, 129, 0.3);
+  --color-merch-text: #a7f3d0;
+  --color-merch-border: rgba(16, 185, 129, 0.5);
+  --color-merch-link: #6ee7b7;
+  --color-other-bg: rgba(113, 113, 122, 0.5);
+  --color-other-text: #d4d4d8;
+  --color-other-border: rgba(113, 113, 122, 0.5);
+  --color-other-link: #a1a1aa;
+
+  /* Colors - alerts & errors */
+  --color-alert-bg: rgba(245, 158, 11, 0.15);
+  --color-alert-border: rgba(245, 158, 11, 0.6);
+  --color-alert-text: #fef3c7;
+  --color-alert-text-muted: rgba(254, 243, 199, 0.8);
+  --color-error-bg: rgba(239, 68, 68, 0.2);
+  --color-error-border: rgba(239, 68, 68, 0.4);
+  --color-error-text: #fecaca;
+
+  /* Colors - stats */
+  --color-stat-bg: rgba(255, 255, 255, 0.05);
+  --color-stat-attention-bg: rgba(245, 158, 11, 0.2);
+  --color-stat-attention-border: rgba(245, 158, 11, 0.4);
+  --color-stat-attention-text: #fde68a;
+  --color-stat-attention-label: rgba(253, 230, 138, 0.8);
+
+  /* Colors - hover */
+  --color-hover-link: #fda4af;
+
+  /* Shadows */
+  --shadow-btn: 0 10px 15px -3px rgba(244, 63, 94, 0.25);
+
+  /* Filter buttons */
+  --color-filter-bg: rgba(255, 255, 255, 0.08);
+  --color-filter-bg-hover: rgba(255, 255, 255, 0.14);
+  --color-filter-bg-active: rgba(245, 158, 11, 0.25);
+  --color-filter-border: rgba(255, 255, 255, 0.12);
+  --color-filter-border-hover: rgba(255, 255, 255, 0.25);
+  --color-filter-border-active: rgba(245, 158, 11, 0.5);
+  --color-filter-text: #a1a1aa;
+  --color-filter-text-active: #fde68a;
+}
+
+body {
+  font-feature-settings: "ss01" 1, "ss02" 1;
+  -webkit-font-smoothing: antialiased;
+
+  button {
+    cursor: pointer;
   }
-  
-  body {
-    font-feature-settings: "ss01" 1, "ss02" 1;
-    -webkit-font-smoothing: antialiased;
-  }
+}

@@ -33,7 +33,7 @@ export const getVideoDetails = async (chunkedIds: string, ytApiKey: string) => {
         'https://www.googleapis.com/youtube/v3/videos',
         {
             query: {
-                part: 'snippet,statistics',
+                part: 'snippet,statistics,contentDetails,paidProductPlacementDetails',
                 id: chunkedIds,
                 key: ytApiKey
             }

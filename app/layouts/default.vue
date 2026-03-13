@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-screen bg-surface text-ink font-sans">
-        <NuxtPage />
-    </div>
+  <div class="min-h-screen bg-page-bg text-text-primary">
+    <NuxtPage />
+  </div>
 </template>

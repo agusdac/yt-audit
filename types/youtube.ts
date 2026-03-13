@@ -1,4 +1,4 @@
-import type { CategorizedLinks } from "../utils/helpers"
+import type { CategorizedLinks } from "../utils/url"
 export interface YouTubeChannelResponse {
     items: Array<{
         contentDetails: {
@@ -24,6 +24,8 @@ export interface YouTubePlaylistResponse {
     }>
 }
 
+export type VideoType = 'video' | 'short' | 'live'
+
 export interface VideoDetails {
     id: string
     title: string
@@ -32,21 +34,33 @@ export interface VideoDetails {
     viewCount: number
     likeCount: number
     commentCount: number,
-    links: CategorizedLinks
+    duration: number,
+    type: VideoType,
+    links: CategorizedLinks,
+    hasPaidProductPlacement: boolean
+}
+
+export interface YouTubeVideoDetailSingleResponse {
+    id: string
+    snippet: {
+        title: string
+        description: string
+        publishedAt: string
+        liveBroadcastContent: string
+    }
+    statistics: {
+        viewCount: string
+        likeCount: string
+        commentCount: string
+    },
+    contentDetails: {
+        duration: string
+    },
+    paidProductPlacementDetails?: {
+        hasPaidProductPlacement: boolean
+    }
 }
 
 export interface YouTubeVideoDetailResponse {
-    items: Array<{
-        id: string
-        snippet: {
-            title: string
-            description: string
-            publishedAt: string
-        }
-        statistics: {
-            viewCount: string
-            likeCount: string
-            commentCount: string
-        }
-    }>
+    items: Array<YouTubeVideoDetailSingleResponse>
 }
