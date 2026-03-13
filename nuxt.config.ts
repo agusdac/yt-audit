@@ -9,4 +9,7 @@ export default defineNuxtConfig({
       tailwindcss(),
     ],
   },
+  runtimeConfig: {
+    ytApiKey: process.env.YT_API_KEY,
+  },
 });
