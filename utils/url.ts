@@ -4,6 +4,19 @@
  * - Markdown links [text](url)
  * - Trailing punctuation cleanup
  */
+/** Normalize URL for matching (trailing slash, hash, consistent comparison) */
+export const normalizeUrl = (url: string): string => {
+    try {
+        const u = new URL(url.trim())
+        u.hash = ''
+        let s = u.toString()
+        if (s.endsWith('/') && s.length > 8) s = s.slice(0, -1)
+        return s
+    } catch {
+        return url.trim()
+    }
+}
+
 export const extractUrls = (text: string): string[] => {
     const seen = new Set<string>();
     const normalize = (url: string) => url.replace(/[.,!?;:)\]}>'"]+$/, '').trim();
@@ -26,41 +39,86 @@ export const extractUrls = (text: string): string[] => {
 
 export interface CategorizedLinks {
     socials: string[]
+    socialWithRevenue: string[]
     affiliates: string[]
     sponsors: string[]
     merch: string[]
     other: string[]
 }
 
-export const classifyLinks = (text: string): CategorizedLinks => {
+const AFFILIATE_DOMAINS = [
+    'rakuten.com', 'impact.com', 'shareasale.com', 'cj.com', 'awin1.com', 'prf.hn',
+    'amzn.to', 'amazon.com/shop', 'go.skimresources.com', 'rewardstyle.com', 'shopstyle',
+    'ltk.app', 'sovrn.com', 'flexoffers.com', 'partnerstack.com'
+];
+
+const SPONSOR_DOMAINS = [
+    'nordvpn.com', 'expressvpn.com', 'surfshark.com', 'privateinternetaccess.com', 'tunnelbear.com',
+    'skillshare.com', 'curiositystream.com', 'brilliant.org', 'nebula.tv', 'mubi.com',
+    'audible.com', 'betterhelp.com', 'hellofresh', 'manscaped', 'ridge.com', 'raycon', 'vessi',
+    'magic spoon', 'athletic greens', 'ag1.com', 'native deodorant', 'manscaped.com',
+    'bit.ly', 't.ly', 'brand.link', 'geni.us', 'shorturl.at'
+];
+
+const MERCH_DOMAINS = [
+    'teespring.com', 'represent.com', 'youtooz.com', 'creator-spring.com', 'streamlabs.com',
+    'fanjoy.co', 'spreadshirt', 'merch.amazon', 'spring.com', 'designbyhumans.com'
+];
+
+/** Pure social—not checked for dead/redirect (low value, high false positives) */
+const SOCIAL_DOMAINS = [
+    'twitter.com', 'x.com', 'instagram.com', 'tiktok.com', 'facebook.com',
+    'discord.gg', 'discord.com', 'youtube.com', 'youtu.be', 'twitch.tv',
+    'linkedin.com', 'reddit.com'
+];
+
+/** Social with revenue—checked for dead/redirect (Patreon, Ko-fi, etc.) */
+const SOCIAL_WITH_REVENUE_DOMAINS = [
+    'patreon.com', 'ko-fi.com', 'buymeacoffee.com', 'github.com/sponsors',
+    'substack.com', 'kofi.com'
+];
+
+const hasDomain = (url: string, domains: string[]): boolean =>
+    domains.some(d => url.toLowerCase().includes(d));
+
+const hasParam = (url: string, params: string[]): boolean =>
+    params.some(p => url.toLowerCase().includes(p + '='));
+
+export const classifyLinks = (text: string, userSponsorDomains?: string[]): CategorizedLinks => {
     const rawLinks = extractUrls(text);
 
     const categories: CategorizedLinks = {
         socials: [],
+        socialWithRevenue: [],
         affiliates: [],
         sponsors: [],
         merch: [],
         other: []
     };
 
+    const allSponsorDomains = [...SPONSOR_DOMAINS, ...(userSponsorDomains ?? [])];
+
     rawLinks.forEach(link => {
         const l = link.toLowerCase();
 
-        // 1. Social Media (Grouping/Discarding)
-        if (l.includes('twitter.com') || l.includes('x.com') || l.includes('instagram.com') || l.includes('tiktok.com') || l.includes('facebook.com') || l.includes('discord.gg') || l.includes('discord.com') || l.includes('youtube.com') || l.includes('youtu.be') || l.includes('twitch.tv')) {
+        // 1. Social with revenue (Patreon, Ko-fi, etc.)—checked for dead/redirect
+        if (hasDomain(l, SOCIAL_WITH_REVENUE_DOMAINS)) {
+            categories.socialWithRevenue.push(link);
+        }
+        // 2. Pure social (Twitter, Twitch, Instagram, etc.)—not checked
+        else if (hasDomain(l, SOCIAL_DOMAINS)) {
             categories.socials.push(link);
         }
-        // 2. Common Merch Platforms
-        else if (l.includes('teespring.com') || l.includes('shop') || l.includes('merch') || l.includes('represent.com')) {
-            categories.merch.push(link);
-        }
-        // 3. Known Affiliate/Sponsor Patterns
-        // (Commonly used by YouTubers: amzn.to for Amazon, bit.ly/ggl for sponsors)
-        else if (l.includes('amzn.to') || l.includes('amazon.com/shop') || l.includes('go.skimresources.com')) {
+        // 3. Affiliates
+        else if (hasDomain(l, AFFILIATE_DOMAINS) || hasParam(l, ['ref=', 'affiliate=', 'tag=', 'aid=', 'pid=', 'ref_='])) {
             categories.affiliates.push(link);
         }
-        // 4. Sponsor/External (Usually unique domains or shortened links)
-        else if (l.includes('bit.ly') || l.includes('t.ly') || l.includes('brand.link')) {
+        // 3. Merch (domain-based)
+        else if (hasDomain(l, MERCH_DOMAINS) || /\/shop\b|\/store\b|\/merch\b/.test(l)) {
+            categories.merch.push(link);
+        }
+        // 4. Sponsors (shorteners + known brands + user-defined)
+        else if (hasDomain(l, allSponsorDomains)) {
             categories.sponsors.push(link);
         }
         else {
@@ -69,4 +127,22 @@ export const classifyLinks = (text: string): CategorizedLinks => {
     });
 
     return categories;
+};
+
+const PROMO_PARAMS = ['code', 'promo', 'coupon', 'discount', 'ref', 'aff'];
+const PROMO_PATH_REGEX = /\/discount\/([^/?#]+)|\/p\/([^/?#]+)/i;
+
+export const extractPromoCode = (url: string): string | null => {
+    try {
+        const u = new URL(url);
+        for (const p of PROMO_PARAMS) {
+            const v = u.searchParams.get(p);
+            if (v && v.length > 0 && v.length < 100) return v;
+        }
+        const pathMatch = url.match(PROMO_PATH_REGEX);
+        if (pathMatch) return (pathMatch[1] ?? pathMatch[2]) || null;
+        return null;
+    } catch {
+        return null;
+    }
 };

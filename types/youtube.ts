@@ -38,6 +38,7 @@ export interface VideoDetails {
     type: VideoType,
     links: CategorizedLinks,
     hasPaidProductPlacement: boolean
+    channelHandle?: string
 }
 
 export interface YouTubeVideoDetailSingleResponse {

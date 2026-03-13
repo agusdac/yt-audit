@@ -22,9 +22,6 @@ export const getPlaylistVideos = async (playlistId: string, ytApiKey: string, ne
             }
         }
     )
-    if (!data.items || data.items.length === 0) {
-        throw createError({ statusCode: 404, statusMessage: `Playlist ${playlistId} not found` })
-    }
     return data
 }
 
