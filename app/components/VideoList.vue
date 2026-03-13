@@ -62,15 +62,15 @@
         <span class="text-sm block text-stat-attention-label">Need your attention</span>
         <p class="text-2xl font-bold text-stat-attention-text">{{ needsAttentionCount }}</p>
       </div>
-      <div v-if="deadLinksCount > 0" class="rounded-card px-5 py-3 bg-error-bg border border-error-border">
+      <div v-if="linkResults.length > 0" class="rounded-card px-5 py-3 bg-error-bg border border-error-border">
         <span class="text-sm block text-error-text/80">Dead</span>
         <p class="text-2xl font-bold text-error-text">{{ deadLinksCount }}</p>
       </div>
-      <div v-if="redirectedLinksCount > 0" class="rounded-card px-5 py-3 bg-alert-bg border border-alert-border">
+      <div v-if="linkResults.length > 0" class="rounded-card px-5 py-3 bg-alert-bg border border-alert-border">
         <span class="text-sm block text-alert-text-muted">Redirected</span>
         <p class="text-2xl font-bold text-alert-text">{{ redirectedLinksCount }}</p>
       </div>
-      <div v-if="okLinksCount > 0 && linkResults.length > 0" class="rounded-card px-5 py-3 bg-stat-bg border border-border-default">
+      <div v-if="linkResults.length > 0" class="rounded-card px-5 py-3 bg-stat-bg border border-border-default">
         <span class="text-sm block text-text-muted">OK</span>
         <p class="text-2xl font-bold text-merch-link">{{ okLinksCount }}</p>
       </div>
@@ -146,10 +146,6 @@
       <label v-if="userSponsors.length > 0 && allLinksCount > 0" class="flex items-center gap-2 cursor-pointer">
         <input v-model="checkOnlyMySponsors" type="checkbox" class="rounded" />
         <span class="text-sm text-text-muted">Check only my sponsor links</span>
-      </label>
-      <label v-if="allLinksCount > 0" class="flex items-center gap-2 cursor-pointer">
-        <input v-model="includeOtherLinks" type="checkbox" class="rounded" />
-        <span class="text-sm text-text-muted">Include "other" links in check</span>
       </label>
     </div>
 
@@ -319,7 +315,7 @@
                 </template>
               </div>
 
-              <div v-if="!hasMonetizationLinks(video.links) && video.links.socialWithRevenue.length === 0" class="text-sm text-text-muted-strong">
+              <div v-if="!hasMonetizationLinks(video.links)" class="text-sm text-text-muted-strong">
                 No sponsor/affiliate links detected
               </div>
             </div>
@@ -369,7 +365,6 @@ const filterMySponsors = ref(false)
 const userSponsorsInput = ref('')
 const userSponsors = ref<string[]>([])
 const checkOnlyMySponsors = ref(false)
-const includeOtherLinks = ref(false)
 const linkCheckError = ref('')
 const currentPage = ref(1)
 
@@ -384,7 +379,7 @@ const isUserSponsorLink = (url: string): boolean =>
   userSponsors.value.some(domain => url.toLowerCase().includes(domain))
 
 const videoHasUserSponsorLinks = (video: VideoDetails): boolean => {
-  const links = getLinksToCheck(video.links, includeOtherLinks.value)
+  const links = getLinksToCheck(video.links)
   return links.some(isUserSponsorLink)
 }
 const linkResults = ref<LinkCheckResult[]>([])
@@ -429,16 +424,18 @@ const linkClass = (url: string, defaultColor: string): string => {
 }
 
 /** Links included in the dead/redirect check (excludes pure social like Twitch, Instagram) */
-const getLinksToCheck = (links: CategorizedLinks, includeOther = false): string[] => {
-  const base = [...links.sponsors, ...links.affiliates, ...links.merch, ...links.socialWithRevenue]
-  if (includeOther) base.push(...links.other)
-  return base
-}
+const getLinksToCheck = (links: CategorizedLinks): string[] => [
+  ...links.sponsors,
+  ...links.affiliates,
+  ...links.merch,
+  ...links.other,
+  ...links.socialWithRevenue
+]
 
 const allLinksCount = computed(() => {
   const seen = new Set<string>()
   props.videos.forEach(v => {
-    getLinksToCheck(v.links, includeOtherLinks.value).forEach(url => seen.add(url))
+    getLinksToCheck(v.links).forEach(url => seen.add(url))
   })
   return seen.size
 })
@@ -447,7 +444,7 @@ const linksToCheckCount = computed(() => {
   if (!checkOnlyMySponsors.value || userSponsors.value.length === 0) return allLinksCount.value
   const seen = new Set<string>()
   props.videos.forEach(v => {
-    getLinksToCheck(v.links, includeOtherLinks.value)
+    getLinksToCheck(v.links)
       .filter(isUserSponsorLink)
       .forEach(url => seen.add(url))
   })
@@ -455,16 +452,16 @@ const linksToCheckCount = computed(() => {
 })
 
 const hasMonetizationLinks = (links: CategorizedLinks): boolean => {
-  const { sponsors, affiliates, merch, socialWithRevenue } = links
-  return sponsors.length > 0 || affiliates.length > 0 || merch.length > 0 || socialWithRevenue.length > 0
+  const { sponsors, affiliates, merch, socialWithRevenue, other } = links
+  return sponsors.length > 0 || affiliates.length > 0 || merch.length > 0 || socialWithRevenue.length > 0 || other.length > 0
 }
 
 const matchesLinkFilter = (video: VideoDetails): boolean => {
   if (!filterSponsor.value && !filterAffiliate.value && !filterMerch.value) return true
-  const { sponsors, affiliates, merch, socialWithRevenue } = video.links
+  const { sponsors, affiliates, merch, socialWithRevenue, other } = video.links
   if (filterSponsor.value && sponsors.length > 0) return true
   if (filterAffiliate.value && affiliates.length > 0) return true
-  if (filterMerch.value && (merch.length > 0 || socialWithRevenue.length > 0)) return true
+  if (filterMerch.value && (merch.length > 0 || socialWithRevenue.length > 0 || other.length > 0)) return true
   return false
 }
 
@@ -527,7 +524,7 @@ const filteredVideos = computed(() => {
   })
 })
 
-watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors, includeOtherLinks], () => {
+watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors], () => {
   currentPage.value = 1
 })
 
@@ -560,7 +557,7 @@ const runLinkCheck = async () => {
   const urlToVideoIds = new Map<string, string[]>()
 
   props.videos.forEach(video => {
-    getLinksToCheck(video.links, includeOtherLinks.value)
+    getLinksToCheck(video.links)
       .filter(url => !checkOnlyMySponsors.value || userSponsors.value.length === 0 || isUserSponsorLink(url))
       .forEach(url => {
         const existing = urlToVideoIds.get(url) ?? []

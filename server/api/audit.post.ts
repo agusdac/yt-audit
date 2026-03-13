@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
 
   const hasMonetizationLinks = (v: VideoDetails) =>
     v.links.sponsors.length > 0 || v.links.affiliates.length > 0 ||
-    v.links.merch.length > 0 || v.links.socialWithRevenue.length > 0
+    v.links.merch.length > 0 || v.links.socialWithRevenue.length > 0 || v.links.other.length > 0
 
   const videos = [...seen.values()].sort((a, b) => {
     const aHas = hasMonetizationLinks(a) ? 1 : 0
