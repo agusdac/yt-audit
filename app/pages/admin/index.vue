@@ -4,7 +4,7 @@ definePageMeta({
   layout: 'admin'
 })
 
-await navigateTo('/admin/audit', { replace: true })
+await navigateTo('/admin/dashboard', { replace: true })
 </script>
 
 <template>

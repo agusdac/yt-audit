@@ -3,10 +3,15 @@ import { eq } from 'drizzle-orm'
 import { db } from '~~/server/db'
 import { linkCache } from '~~/server/db/schemas/linkCache'
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+function getCacheTtlSeconds(): number {
+  const config = useRuntimeConfig()
+  const hours = Number(config.linkCacheTtlHours) || 24
+  return hours * 60 * 60
+}
 
 export async function getCachedLinkResult(url: string): Promise<LinkCheckResult | null> {
-  const minCachedAt = Math.floor(Date.now() / 1000) - CACHE_TTL_MS / 1000
+  const ttlSeconds = getCacheTtlSeconds()
+  const minCachedAt = Math.floor(Date.now() / 1000) - ttlSeconds
   const row = await db.query.linkCache.findFirst({
     where: eq(linkCache.url, url),
     columns: { result: true, cachedAt: true }

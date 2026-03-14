@@ -40,7 +40,12 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    return await runAudit(handles, config.ytApiKey)
+    const result = await runAudit(handles, config.ytApiKey)
+    if (creatorUserId) {
+      const { setCachedAudit } = await import('../service/auditCacheService')
+      await setCachedAudit(creatorUserId, handles, result.videos, [])
+    }
+    return result
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     throw createError({ statusCode: 500, message: msg })

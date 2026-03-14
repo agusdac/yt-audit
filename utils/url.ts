@@ -4,6 +4,15 @@
  * - Markdown links [text](url)
  * - Trailing punctuation cleanup
  */
+/** Extract hostname from URL, or null on parse error */
+export const getHostname = (url: string): string | null => {
+    try {
+        return new URL(url.trim()).hostname.toLowerCase()
+    } catch {
+        return null
+    }
+}
+
 /** Normalize URL for matching (trailing slash, hash, consistent comparison) */
 export const normalizeUrl = (url: string): string => {
     try {
@@ -56,7 +65,14 @@ const SOCIAL_DOMAINS = linkDomainsConfig.socialDomains as string[]
 const SOCIAL_WITH_REVENUE_DOMAINS = linkDomainsConfig.socialWithRevenueDomains as string[]
 
 const hasDomain = (url: string, domains: string[]): boolean =>
-    domains.some(d => url.toLowerCase().includes(d));
+    domains.some(d => {
+        const l = url.toLowerCase()
+        if (d.includes('/')) return l.includes(d)
+        const host = getHostname(url)
+        if (!host) return l.includes(d)
+        if (d.includes('.')) return host === d || host.startsWith(d + '.')
+        return host.split('.').some(part => part === d)
+    });
 
 const hasParam = (url: string, params: string[]): boolean =>
     params.some(p => url.toLowerCase().includes(p + '='));

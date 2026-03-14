@@ -269,11 +269,13 @@
 </template>
 
 <script setup lang="ts">
+import type { Ref } from 'vue'
 import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 import type { VideoDetails, VideoType } from '~~/types/youtube'
 import type { CategorizedLinks } from '~~/utils/url'
+import type { LinkCheckResult } from '~~/types/links'
 import { getLinksToCheck } from '~~/utils/url'
 import { useLinkCheck } from '~~/composables/useLinkCheck'
 import { getRevenueLossForLink } from '~~/utils/revenue'
@@ -282,6 +284,7 @@ const props = withDefaults(
   defineProps<{
     videos: VideoDetails[]
     syncLinkResultsToStore?: boolean
+    linkResultsRef?: Ref<LinkCheckResult[]>
   }>(),
   { syncLinkResultsToStore: false }
 )
@@ -308,12 +311,13 @@ const parseUserSponsors = () => {
 
 const store = props.syncLinkResultsToStore ? useCreatorWorkspaceStore() : null
 const storeRefs = store ? storeToRefs(store) : null
+const linkResultsRef = props.linkResultsRef ?? (storeRefs?.linkResults ?? undefined)
 const linkCheck = useLinkCheck(
   () => props.videos,
   {
     userSponsors: () => userSponsors.value,
     checkOnlyMySponsors: () => checkOnlyMySponsors.value,
-    ...(storeRefs && { linkResultsRef: storeRefs.linkResults })
+    ...(linkResultsRef && { linkResultsRef })
   }
 )
 

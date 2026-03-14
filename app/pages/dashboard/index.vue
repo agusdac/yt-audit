@@ -27,8 +27,8 @@
         </div>
         <button type="button"
           class="px-6 py-3 rounded-button font-semibold bg-gradient-to-r from-btn-from to-btn-to shadow-btn hover:from-btn-hover-from hover:to-btn-hover-to disabled:opacity-60 disabled:cursor-not-allowed"
-          :disabled="store.isLoading" @click="store.runAudit">
-          {{ store.isLoading ? 'Auditing...' : 'Run Audit' }}
+          :disabled="store.isLoading || store.isCheckingLinks" @click="store.runAudit">
+          {{ store.isLoading ? 'Auditing...' : store.isCheckingLinks ? 'Checking links...' : 'Run Audit' }}
         </button>
       </div>
 
@@ -41,8 +41,8 @@
             </span>
             <button type="button"
               class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default hover:bg-card-bg-attention disabled:opacity-60"
-              :disabled="store.isLoading" @click="store.runAudit">
-              {{ store.isLoading ? 'Auditing...' : 'Run Audit' }}
+              :disabled="store.isLoading || store.isCheckingLinks" @click="store.runAudit">
+              {{ store.isLoading ? 'Auditing...' : store.isCheckingLinks ? 'Checking links...' : 'Run Audit' }}
             </button>
             <NuxtLink to="/videos"
               class="px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to hover:from-btn-hover-from hover:to-btn-hover-to">
@@ -51,8 +51,9 @@
           </div>
         </div>
 
-        <div v-if="store.isLoading" class="mb-6">
+        <div v-if="store.isLoading || store.isCheckingLinks" class="mb-6">
           <AuditSkeleton />
+          <p v-if="store.isCheckingLinks" class="text-sm text-text-muted mt-2">Checking links...</p>
         </div>
 
         <template v-else>
@@ -112,9 +113,17 @@ definePageMeta({
 })
 
 const store = useCreatorWorkspaceStore()
+const config = useRuntimeConfig()
 
 onMounted(async () => {
   if (!store.me) await store.fetchMe()
+  if (config.public.autoRunAuditOnLogin && store.me?.linkedChannels?.length && !store.hasVideos) {
+    const cached = await store.loadFromCache()
+    if (!cached) {
+      await store.runAudit()
+      if (store.videos.length > 0) await store.runLinkCheck()
+    }
+  }
 })
 
 const deadLinksWithRevenue = computed(() => {

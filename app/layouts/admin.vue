@@ -9,6 +9,13 @@
             </NuxtLink>
             <nav class="flex items-center gap-2">
               <NuxtLink
+                to="/admin/dashboard"
+                class="px-3 py-1.5 rounded-button text-sm font-medium transition-colors"
+                :class="$route.path === '/admin/dashboard' ? 'bg-filter-bg-active border border-filter-border-active text-filter-text-active' : 'text-text-muted hover:text-text-primary hover:bg-filter-bg'"
+              >
+                Dashboard
+              </NuxtLink>
+              <NuxtLink
                 to="/admin/audit"
                 class="px-3 py-1.5 rounded-button text-sm font-medium transition-colors"
                 :class="$route.path === '/admin/audit' ? 'bg-filter-bg-active border border-filter-border-active text-filter-text-active' : 'text-text-muted hover:text-text-primary hover:bg-filter-bg'"

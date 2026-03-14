@@ -30,28 +30,27 @@
     "irclickid="
   ],
   "sponsorDomains": [
-    "nordvpn.com",
-    "expressvpn.com",
-    "surfshark.com",
-    "privateinternetaccess.com",
-    "tunnelbear.com",
-    "skillshare.com",
-    "curiositystream.com",
+    "nordvpn",
+    "expressvpn",
+    "surfshark",
+    "privateinternetaccess",
+    "tunnelbear",
+    "skillshare",
+    "curiositystream",
     "brilliant.org",
     "nebula.tv",
-    "mubi.com",
-    "audible.com",
-    "betterhelp.com",
+    "mubi",
+    "audible",
+    "betterhelp",
     "hellofresh",
     "manscaped",
-    "ridge.com",
+    "ridge",
     "raycon",
     "vessi",
     "magic spoon",
     "athletic greens",
     "ag1.com",
     "native deodorant",
-    "manscaped.com",
     "bit.ly",
     "t.ly",
     "brand.link",
@@ -64,16 +63,16 @@
     "cutt.ly"
   ],
   "merchDomains": [
-    "teespring.com",
-    "represent.com",
-    "youtooz.com",
-    "creator-spring.com",
-    "streamlabs.com",
-    "fanjoy.co",
+    "teespring",
+    "represent",
+    "youtooz",
+    "creator-spring",
+    "streamlabs",
+    "fanjoy",
     "spreadshirt",
     "merch.amazon",
     "spring.com",
-    "designbyhumans.com"
+    "designbyhumans"
   ],
   "socialDomains": [
     "twitter.com",
@@ -90,11 +89,11 @@
     "reddit.com"
   ],
   "socialWithRevenueDomains": [
-    "patreon.com",
-    "ko-fi.com",
-    "buymeacoffee.com",
+    "patreon",
+    "ko-fi",
+    "buymeacoffee",
     "github.com/sponsors",
-    "substack.com",
-    "kofi.com"
+    "substack",
+    "kofi"
   ]
 }

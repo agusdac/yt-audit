@@ -5,7 +5,7 @@
         <h2 class="font-semibold text-text-primary mb-4">Audit any channel</h2>
         <div class="flex flex-wrap gap-2 p-3 rounded-card bg-filter-bg border border-border-default mb-4">
           <span
-            v-for="handle in channelHandles"
+            v-for="handle in store.channelHandles"
             :key="handle"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary"
           >
@@ -27,27 +27,32 @@
         <button
           type="button"
           class="px-6 py-3 rounded-button font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed bg-gradient-to-r from-btn-from to-btn-to shadow-btn hover:from-btn-hover-from hover:to-btn-hover-to"
-          :disabled="isLoading || channelHandles.length === 0"
+          :disabled="store.isLoading || store.isCheckingLinks || store.channelHandles.length === 0"
           @click="runAudit"
         >
-          {{ isLoading ? 'Auditing...' : 'Run Audit' }}
+          {{ store.isLoading ? 'Auditing...' : store.isCheckingLinks ? 'Checking links...' : 'Run Audit' }}
         </button>
       </div>
 
-      <div v-if="error" class="rounded-card px-4 py-3 flex items-center gap-3 bg-error-bg border border-error-border text-error-text mb-6">
+      <div v-if="store.error" class="rounded-card px-4 py-3 flex items-center gap-3 bg-error-bg border border-error-border text-error-text mb-6">
         <span class="text-2xl">⚠️</span>
-        <span>{{ error }}</span>
+        <span>{{ store.error }}</span>
+        <button type="button" class="ml-auto px-3 py-1 rounded-button text-sm" @click="store.clearError">Dismiss</button>
       </div>
 
-      <div v-if="isLoading" class="mb-6">
-        <p class="text-text-muted mb-4">Fetching videos...</p>
+      <div v-if="store.isLoading || store.isCheckingLinks" class="mb-6">
+        <p class="text-text-muted mb-4">{{ store.isCheckingLinks ? 'Checking links...' : 'Fetching videos...' }}</p>
         <AuditSkeleton />
       </div>
 
-      <div v-else-if="videoDetails.length > 0" class="mb-6">
+      <div v-else-if="store.videos.length > 0" class="mb-6">
         <ErrorBoundary>
-          <VideoList :videos="videoDetails" />
+          <VideoList :videos="store.videos" :link-results-ref="storeToRefs(store).linkResults" />
         </ErrorBoundary>
+      </div>
+
+      <div v-else class="rounded-card p-8 bg-card-bg border border-border-default text-center">
+        <p class="text-text-muted mb-4">Add channel handles above and run an audit to see videos and check links.</p>
       </div>
     </div>
   </div>
@@ -55,54 +60,37 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { VideoDetails } from '~~/types/youtube'
+import { storeToRefs } from 'pinia'
+import { useAdminAuditStore } from '~~/stores/adminAuditStore'
 
 definePageMeta({
   middleware: 'admin-auth',
   layout: 'admin'
 })
 
-const channelHandles = ref<string[]>([])
+const store = useAdminAuditStore()
 const channelInput = ref('')
 const channelInputRef = ref<HTMLInputElement | null>(null)
-const isLoading = ref(false)
-const error = ref<string | null>(null)
-const videoDetails = ref<VideoDetails[]>([])
 
 const normalizeHandle = (h: string): string => h.trim().replace(/^@/, '')
 
 const addChannel = () => {
   const h = normalizeHandle(channelInput.value)
-  if (h && !channelHandles.value.includes(h)) {
-    channelHandles.value = [...channelHandles.value, h]
+  if (h && !store.channelHandles.includes(h)) {
+    store.setChannelHandles([...store.channelHandles, h])
     channelInput.value = ''
     channelInputRef.value?.focus()
   }
 }
 
 const removeChannel = (handle: string) => {
-  channelHandles.value = channelHandles.value.filter(h => h !== handle)
+  store.setChannelHandles(store.channelHandles.filter((h) => h !== handle))
 }
 
 const runAudit = async () => {
   addChannel()
-  if (channelHandles.value.length === 0) return
-
-  isLoading.value = true
-  error.value = null
-  videoDetails.value = []
-
-  try {
-    const response = await $fetch<{ count: number; videos: VideoDetails[] }>('/api/audit', {
-      method: 'POST',
-      body: { handles: channelHandles.value }
-    })
-    videoDetails.value = response.videos
-  } catch (e: unknown) {
-    const err = e as { data?: { message?: string }; message?: string }
-    error.value = err?.data?.message ?? err?.message ?? 'Failed to run audit.'
-  } finally {
-    isLoading.value = false
-  }
+  if (store.channelHandles.length === 0) return
+  await store.runAudit(store.channelHandles)
+  if (store.videos.length > 0) await store.runLinkCheck()
 }
 </script>

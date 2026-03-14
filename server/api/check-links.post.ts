@@ -168,5 +168,17 @@ export default defineEventHandler(async (event) => {
     }
   })
 
+  if (creatorUserId) {
+    const { getLinkedChannels } = await import('../service/userService')
+    const { getCachedAudit, setCachedAudit } = await import('../service/auditCacheService')
+    const channels = await getLinkedChannels(creatorUserId)
+    const handles = channels.map((c) => c.handle)
+    const ttlHours = Number(config.auditCacheTtlHours) || 24
+    const cached = await getCachedAudit(creatorUserId, handles, ttlHours)
+    if (cached?.videos.length) {
+      await setCachedAudit(creatorUserId, handles, cached.videos, linkResults)
+    }
+  }
+
   return { linkResults }
 })

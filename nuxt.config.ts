@@ -11,6 +11,9 @@ export default defineNuxtConfig({
     ],
   },
   runtimeConfig: {
+    public: {
+      autoRunAuditOnLogin: process.env.AUTO_RUN_AUDIT_ON_LOGIN !== 'false',
+    },
     oauth: {
       google: {
         clientId: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID || '',
@@ -25,5 +28,7 @@ export default defineNuxtConfig({
     scheduledAuditChannels: (process.env.SCHEDULED_AUDIT_CHANNELS || '').split(',').map(h => h.trim()).filter(Boolean),
     auditWebhookUrl: process.env.AUDIT_WEBHOOK_URL || '',
     maxVideosToFetch: Number(process.env.MAX_VIDEOS_TO_FETCH) || 200,
+    auditCacheTtlHours: Number(process.env.AUDIT_CACHE_TTL_HOURS) || 24,
+    linkCacheTtlHours: Number(process.env.LINK_CACHE_TTL_HOURS) || 24,
   },
 });

@@ -3,42 +3,33 @@ import type { VideoDetails } from '~~/types/youtube'
 import type { LinkCheckResult } from '~~/types/links'
 import { getLinksToCheck } from '~~/utils/url'
 
-type MeData = {
-  user: { id: string; email: string; name?: string; avatarUrl?: string }
-  linkedChannels: Array<{ id: number; channelId: string; handle: string; channelTitle?: string }>
-}
-
-export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
+export const useAdminAuditStore = defineStore('adminAudit', {
   state: () => ({
     videos: [] as VideoDetails[],
     linkResults: [] as LinkCheckResult[],
     lastAuditAt: null as Date | null,
+    channelHandles: [] as string[],
     isLoading: false,
     isCheckingLinks: false,
-    error: null as string | null,
-    me: null as MeData | null
+    error: null as string | null
   }),
 
   getters: {
     deadLinksCount: (state) => state.linkResults.filter((r) => r.category === 'dead').length,
     hasVideos: (state) => state.videos.length > 0,
-    hasDeadLinks: (state) => state.linkResults.some((r) => r.category === 'dead'),
-    firstChannel: (state) => state.me?.linkedChannels?.[0] ?? null
+    hasDeadLinks: (state) => state.linkResults.some((r) => r.category === 'dead')
   },
 
   actions: {
-    setMe(data: MeData | null) {
-      this.me = data
+    setChannelHandles(handles: string[]) {
+      this.channelHandles = handles
     },
 
-    setLinkResults(results: LinkCheckResult[]) {
-      this.linkResults = results
-    },
+    async runAudit(handles: string[]) {
+      const normalized = handles.map((h) => h.trim().replace(/^@/, '')).filter(Boolean)
+      if (normalized.length === 0) return
 
-    async runAudit() {
-      const channels = this.me?.linkedChannels
-      if (!channels?.length) return
-
+      this.channelHandles = normalized
       this.isLoading = true
       this.error = null
       this.videos = []
@@ -47,7 +38,7 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       try {
         const response = await $fetch<{ count: number; videos: VideoDetails[] }>('/api/audit', {
           method: 'POST',
-          body: { handles: channels.map((c) => c.handle) }
+          body: { handles: normalized }
         })
         this.videos = response.videos
         this.lastAuditAt = new Date()
@@ -91,39 +82,8 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       }
     },
 
-    async loadFromCache() {
-      const channels = this.me?.linkedChannels
-      if (!channels?.length) return null
-
-      try {
-        const data = await $fetch<{ cached: boolean; videos: VideoDetails[]; linkResults: LinkCheckResult[] }>(
-          '/api/audit-cache'
-        )
-        if (data.cached && data.videos.length > 0) {
-          this.videos = data.videos
-          this.linkResults = data.linkResults ?? []
-          this.lastAuditAt = new Date()
-          return true
-        }
-      } catch {
-        // ignore
-      }
-      return false
-    },
-
     clearError() {
       this.error = null
-    },
-
-    async fetchMe() {
-      try {
-        const data = await $fetch<MeData>('/api/auth/me')
-        this.me = data
-        return data
-      } catch {
-        this.me = null
-        return null
-      }
     }
   }
 })
