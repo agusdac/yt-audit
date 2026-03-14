@@ -90,6 +90,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Invalid API key' })
   }
 
+  const session = await getUserSession(event)
+  const creatorUserId = session?.user?.id
+  const { isAdminSessionValid } = await import('../utils/adminAuth')
+  const isAdmin = config.adminPassword && isAdminSessionValid(event, config)
+  if (!creatorUserId && !isAdmin && !apiKey) {
+    throw createError({ statusCode: 401, message: 'Sign in to check links' })
+  }
+
   const body = await readBody<{ checks: Array<{ url: string; videoIds: string[] }> }>(event)
 
   if (!body?.checks || !Array.isArray(body.checks)) {

@@ -16,13 +16,36 @@
     <div v-if="deadLinksCount > 0"
       class="rounded-card flex items-start gap-4 px-5 py-4 bg-error-bg border-2 border-error-border">
       <span class="text-4xl">🔗</span>
-      <div>
+      <div class="flex-1">
         <p class="font-bold text-lg text-error-text">
           {{ deadLinksCount }} dead link{{ deadLinksCount > 1 ? 's' : '' }} found
         </p>
         <p class="text-sm mt-1 text-error-text/80">
           These URLs return 404 or 5xx errors. Update or remove them from your video descriptions.
         </p>
+        <p v-if="totalDeadLinkRevenueLoss > 0" class="text-xl font-bold mt-2 text-error-text">
+          You're losing ~${{ Math.round(totalDeadLinkRevenueLoss) }}/month to dead links
+        </p>
+      </div>
+    </div>
+
+    <div v-if="deadLinksWithRevenue.length > 0" class="rounded-card p-5 bg-error-bg/50 border-2 border-error-border space-y-4">
+      <h3 class="font-bold text-error-text">Dead links — fix these first</h3>
+      <div v-for="item in deadLinksWithRevenue" :key="item.url" class="rounded p-4 bg-card-bg border border-error-border">
+        <p class="text-sm text-error-text line-through break-all font-mono">{{ item.url }}</p>
+        <p class="text-sm mt-1 text-text-muted">
+          {{ item.videoIds.length }} video{{ item.videoIds.length > 1 ? 's' : '' }} affected
+          · ~${{ Math.round(item.revenueLoss) }}/month estimated loss
+        </p>
+        <a
+          v-if="item.firstVideoId"
+          :href="`https://studio.youtube.com/video/${item.firstVideoId}/edit`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-block mt-2 px-3 py-1.5 rounded-button text-sm font-medium bg-error-bg border border-error-border text-error-text hover:opacity-90"
+        >
+          Fix: Edit in YouTube Studio
+        </a>
       </div>
     </div>
 
@@ -52,7 +75,7 @@
       </div>
     </div>
 
-    <div class="flex flex-wrap gap-4">
+    <div class="flex flex-wrap gap-4" role="status" aria-live="polite" aria-atomic="true">
       <div class="rounded-card px-5 py-3 bg-stat-bg border border-border-default">
         <span class="text-sm block text-text-muted">Videos scanned</span>
         <p class="text-2xl font-bold text-text-primary">{{ props.videos.length }}</p>
@@ -205,126 +228,16 @@
       </div>
     </div>
 
-    <div class="space-y-4">
-      <div v-for="video in paginatedVideos" :key="video.id"
-        class="rounded-card border overflow-hidden transition-all duration-200" :class="hasMonetizationLinks(video.links)
-          ? 'bg-card-bg-attention border-border-attention hover:border-hover-border'
-          : 'bg-card-bg border-border-default hover:border-hover-border'">
-        <div class="flex flex-col sm:flex-row gap-4 p-4">
-          <a :href="`https://youtube.com/watch?v=${video.id}`" target="_blank" rel="noopener noreferrer"
-            class="flex-shrink-0 w-full sm:w-48 rounded-lg overflow-hidden bg-thumb-bg"
-            :class="video.type === 'short' ? 'aspect-[9/16] sm:w-32' : 'aspect-video'">
-            <img :src="`https://img.youtube.com/vi/${video.id}/mqdefault.jpg`" :alt="video.title"
-              class="w-full h-full object-cover" />
-          </a>
-
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1 flex-wrap">
-              <span v-if="video.channelHandle" class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-card-bg border border-border-default text-text-muted">
-                @{{ video.channelHandle }}
-              </span>
-              <span v-if="video.type !== 'video'" class="inline-flex px-2 py-0.5 rounded text-xs font-medium uppercase"
-                :class="video.type === 'short' ? 'bg-sponsor-bg text-sponsor-text border border-sponsor-border' : 'bg-affiliate-bg text-affiliate-text border border-affiliate-border'">
-                {{ video.type }}
-              </span>
-              <span v-if="video.hasPaidProductPlacement"
-                class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-merch-bg text-merch-text border border-merch-border">
-                Paid
-              </span>
-            </div>
-            <div class="flex items-start justify-between gap-2">
-              <a :href="`https://youtube.com/watch?v=${video.id}`" target="_blank" rel="noopener noreferrer"
-                class="font-semibold line-clamp-2 transition-colors block text-text-primary hover:text-hover-link flex-1 min-w-0">
-                {{ video.title }}
-              </a>
-              <!-- TODO: Future: YouTube API or OAuth to edit descriptions directly -->
-              <a
-                :href="`https://studio.youtube.com/video/${video.id}/edit`"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="flex-shrink-0 px-2 py-1 rounded-button text-xs font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention hover:border-border-attention hover:text-text-primary transition-all"
-              >
-                Edit in Studio
-              </a>
-            </div>
-            <div class="flex flex-wrap gap-3 mt-2 text-sm text-text-muted">
-              <span>{{ formatViews(video.viewCount) }} views</span>
-              <span>{{ formatDate(video.publishedAt) }}</span>
-            </div>
-
-            <div class="mt-3 space-y-2">
-              <div v-if="video.links.sponsors.length > 0" class="flex flex-wrap gap-2 items-center">
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-sponsor-bg text-sponsor-text border border-sponsor-border">SPONSOR</span>
-                <template v-for="url in video.links.sponsors" :key="url">
-                  <span v-if="isUserSponsorLink(url)" class="text-xs text-alert-text">(My)</span>
-                  <span v-if="hasCodeIssue(url)" class="text-xs text-alert-text" title="Code may be expired">⚠</span>
-                  <a :href="url" target="_blank" rel="noopener noreferrer"
-                    :class="['text-sm hover:underline truncate max-w-[200px]', linkClass(url, 'text-sponsor-link')]">
-                    {{ url }}
-                  </a>
-                </template>
-              </div>
-
-              <div v-if="video.links.affiliates.length > 0" class="flex flex-wrap gap-2 items-center">
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-affiliate-bg text-affiliate-text border border-affiliate-border">AFFILIATE</span>
-                <template v-for="url in video.links.affiliates" :key="url">
-                  <span v-if="isUserSponsorLink(url)" class="text-xs text-alert-text">(My)</span>
-                  <span v-if="hasCodeIssue(url)" class="text-xs text-alert-text" title="Code may be expired">⚠</span>
-                  <a :href="url" target="_blank" rel="noopener noreferrer"
-                    :class="['text-sm hover:underline truncate max-w-[200px]', linkClass(url, 'text-affiliate-link')]">
-                    {{ url }}
-                  </a>
-                </template>
-              </div>
-
-              <div v-if="video.links.merch.length > 0" class="flex flex-wrap gap-2 items-center">
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-merch-bg text-merch-text border border-merch-border">MERCH</span>
-                <template v-for="url in video.links.merch" :key="url">
-                  <span v-if="isUserSponsorLink(url)" class="text-xs text-alert-text">(My)</span>
-                  <span v-if="hasCodeIssue(url)" class="text-xs text-alert-text" title="Code may be expired">⚠</span>
-                  <a :href="url" target="_blank" rel="noopener noreferrer"
-                    :class="['text-sm hover:underline truncate max-w-[200px]', linkClass(url, 'text-merch-link')]">
-                    {{ url }}
-                  </a>
-                </template>
-              </div>
-
-              <div v-if="video.links.socialWithRevenue.length > 0" class="flex flex-wrap gap-2 items-center">
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-merch-bg text-merch-text border border-merch-border">SUPPORT</span>
-                <template v-for="url in video.links.socialWithRevenue" :key="url">
-                  <span v-if="isUserSponsorLink(url)" class="text-xs text-alert-text">(My)</span>
-                  <span v-if="hasCodeIssue(url)" class="text-xs text-alert-text" title="Code may be expired">⚠</span>
-                  <a :href="url" target="_blank" rel="noopener noreferrer"
-                    :class="['text-sm hover:underline truncate max-w-[200px]', linkClass(url, 'text-merch-link')]">
-                    {{ url }}
-                  </a>
-                </template>
-              </div>
-
-              <div v-if="video.links.other.length > 0" class="flex flex-wrap gap-2 items-center">
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-other-bg text-other-text border border-other-border">OTHER</span>
-                <template v-for="url in video.links.other" :key="url">
-                  <span v-if="isUserSponsorLink(url)" class="text-xs text-alert-text">(My)</span>
-                  <span v-if="hasCodeIssue(url)" class="text-xs text-alert-text" title="Code may be expired">⚠</span>
-                  <a :href="url" target="_blank" rel="noopener noreferrer"
-                    :class="['text-sm hover:underline truncate max-w-[200px]', linkClass(url, 'text-other-link')]">
-                    {{ url }}
-                  </a>
-                </template>
-              </div>
-
-              <div v-if="!hasMonetizationLinks(video.links)" class="text-sm text-text-muted-strong">
-                No sponsor/affiliate links detected
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="space-y-4" role="list" aria-label="Videos">
+      <VideoCard
+        v-for="video in paginatedVideos"
+        :key="video.id"
+        :video="video"
+        :has-monetization-links="hasMonetizationLinks(video.links)"
+        :is-user-sponsor-link="isUserSponsorLink"
+        :has-code-issue="hasCodeIssue"
+        :link-class="linkClass"
+      />
     </div>
 
     <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 py-4">
@@ -351,6 +264,7 @@ import type { VideoDetails, VideoType } from '~~/types/youtube'
 import type { CategorizedLinks } from '~~/utils/url'
 import { getLinksToCheck } from '~~/utils/url'
 import { useLinkCheck } from '~~/composables/useLinkCheck'
+import { getRevenueLossForLink } from '~~/utils/revenue'
 
 const props = defineProps<{
   videos: VideoDetails[]
@@ -508,6 +422,23 @@ const needsAttentionCount = computed(() =>
   props.videos.filter(v => hasMonetizationLinks(v.links)).length
 )
 
+const deadLinksWithRevenue = computed(() => {
+  const dead = linkResults.value.filter(r => r.category === 'dead')
+  return dead.map(r => {
+    const { revenueLoss } = getRevenueLossForLink(r, props.videos)
+    return {
+      url: r.url,
+      videoIds: r.videoIds ?? [],
+      revenueLoss,
+      firstVideoId: (r.videoIds ?? [])[0]
+    }
+  })
+})
+
+const totalDeadLinkRevenueLoss = computed(() =>
+  deadLinksWithRevenue.value.reduce((sum, i) => sum + i.revenueLoss, 0)
+)
+
 const runLinkCheckWithParse = () => {
   parseUserSponsors()
   runLinkCheck()
@@ -518,5 +449,4 @@ const retryLinkCheckWithParse = () => {
   retryLinkCheck()
 }
 
-import { formatViews, formatDate } from '~~/utils/format'
 </script>
