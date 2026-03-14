@@ -16,8 +16,6 @@ export const parseISO8601ToSeconds = (duration: string): number => {
 
 export const getVideoType = (v: YouTubeVideoDetailSingleResponse): VideoType => {
     const seconds = parseISO8601ToSeconds(v.contentDetails.duration);
-
-    console.log(v.snippet, v.snippet.liveBroadcastContent);
     if (v.snippet.liveBroadcastContent !== 'none') {
         return 'live';
     }

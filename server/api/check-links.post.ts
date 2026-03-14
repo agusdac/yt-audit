@@ -1,21 +1,12 @@
-import { extractPromoCode } from '~~/utils/url'
+import type { LinkCheckResult } from '~~/types/links'
+import { extractPromoCode, normalizeUrl } from '~~/utils/url'
 
-const CONCURRENCY = 5
-const DELAY_BETWEEN_BATCHES_MS = 150
+const CONCURRENCY = Number(process.env.CHECK_LINKS_CONCURRENCY) || 5
+const DELAY_BETWEEN_BATCHES_MS = Number(process.env.CHECK_LINKS_DELAY_MS) || 150
 const REQUEST_TIMEOUT_MS = 10000
 
 const isDeadStatus = (status: number): boolean =>
   status === 404 || (status >= 500 && status < 600)
-
-const normalizeForCompare = (url: string): string => {
-  try {
-    const u = new URL(url)
-    u.hash = ''
-    return u.toString().replace(/\/$/, '')
-  } catch {
-    return url
-  }
-}
 
 const codeStillInUrl = (url: string, code: string): boolean => {
   const l = url.toLowerCase()
@@ -84,6 +75,21 @@ async function runWithConcurrency<T>(
 }
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig(event)
+  const { checkRateLimit } = await import('../utils/rateLimit')
+  const { getApiKeyFromEvent } = await import('../utils/apiAuth')
+  const apiKey = getApiKeyFromEvent(event)
+  const limitKey = apiKey || getRequestIP(event, { xForwardedFor: true }) || 'anon'
+  const rl = checkRateLimit(limitKey, Number(config.apiRateLimitPerMin) || 60)
+  if (!rl.ok) {
+    setResponseStatus(event, 429)
+    setHeader(event, 'Retry-After', rl.retryAfter ?? 60)
+    throw createError({ statusCode: 429, message: 'Rate limit exceeded' })
+  }
+  if (apiKey && config.apiKey && apiKey !== config.apiKey) {
+    throw createError({ statusCode: 401, message: 'Invalid API key' })
+  }
+
   const body = await readBody<{ checks: Array<{ url: string; videoIds: string[] }> }>(event)
 
   if (!body?.checks || !Array.isArray(body.checks)) {
@@ -102,24 +108,31 @@ export default defineEventHandler(async (event) => {
   const uniqueUrls = [...urlToVideoIds.keys()]
   if (uniqueUrls.length === 0) return { linkResults: [] }
 
-  const linkResults: Array<{
-    url: string
-    requestedUrl: string
-    finalUrl: string
-    status: number
-    redirected: boolean
-    videoIds: string[]
-    category: 'dead' | 'redirected' | 'ok'
-    codeMayBeInvalid?: boolean
-  }> = []
+  const linkResults: LinkCheckResult[] = []
 
-  await runWithConcurrency(uniqueUrls, CONCURRENCY, async (url, index) => {
+  const { getCachedLinkResult, setCachedLinkResult } = await import('../service/linkCacheService')
+
+  const toFetch: string[] = []
+  for (const url of uniqueUrls) {
+    const cached = await getCachedLinkResult(url)
+    if (cached) {
+      linkResults.push({
+        ...cached,
+        videoIds: urlToVideoIds.get(url) ?? [],
+        codeMayBeInvalid: cached.codeMayBeInvalid ? true : undefined
+      })
+    } else {
+      toFetch.push(url)
+    }
+  }
+
+  await runWithConcurrency(toFetch, CONCURRENCY, async (url, index) => {
     if (!url) return
 
     const { status, finalUrl, codeMayBeInvalid } = await checkUrl(url)
 
-    const requestedNorm = normalizeForCompare(url)
-    const finalNorm = normalizeForCompare(finalUrl)
+    const requestedNorm = normalizeUrl(url)
+    const finalNorm = normalizeUrl(finalUrl)
     const redirected = requestedNorm !== finalNorm
 
     let category: 'dead' | 'redirected' | 'ok' = 'ok'
@@ -129,7 +142,7 @@ export default defineEventHandler(async (event) => {
       category = 'redirected'
     }
 
-    linkResults.push({
+    const result = {
       url,
       requestedUrl: url,
       finalUrl,
@@ -138,9 +151,11 @@ export default defineEventHandler(async (event) => {
       videoIds: urlToVideoIds.get(url) ?? [],
       category,
       ...(codeMayBeInvalid && { codeMayBeInvalid })
-    })
+    }
+    linkResults.push(result)
+    await setCachedLinkResult(url, result)
 
-    if (index < uniqueUrls.length - 1 && (index + 1) % CONCURRENCY === 0) {
+    if (index < toFetch.length - 1 && (index + 1) % CONCURRENCY === 0) {
       await sleep(DELAY_BETWEEN_BATCHES_MS)
     }
   })

@@ -46,37 +46,14 @@ export interface CategorizedLinks {
     other: string[]
 }
 
-const AFFILIATE_DOMAINS = [
-    'rakuten.com', 'impact.com', 'shareasale.com', 'cj.com', 'awin1.com', 'prf.hn',
-    'amzn.to', 'amazon.com/shop', 'go.skimresources.com', 'rewardstyle.com', 'shopstyle',
-    'ltk.app', 'sovrn.com', 'flexoffers.com', 'partnerstack.com'
-];
+import linkDomainsConfig from '../config/link-domains.json'
 
-const SPONSOR_DOMAINS = [
-    'nordvpn.com', 'expressvpn.com', 'surfshark.com', 'privateinternetaccess.com', 'tunnelbear.com',
-    'skillshare.com', 'curiositystream.com', 'brilliant.org', 'nebula.tv', 'mubi.com',
-    'audible.com', 'betterhelp.com', 'hellofresh', 'manscaped', 'ridge.com', 'raycon', 'vessi',
-    'magic spoon', 'athletic greens', 'ag1.com', 'native deodorant', 'manscaped.com',
-    'bit.ly', 't.ly', 'brand.link', 'geni.us', 'shorturl.at'
-];
-
-const MERCH_DOMAINS = [
-    'teespring.com', 'represent.com', 'youtooz.com', 'creator-spring.com', 'streamlabs.com',
-    'fanjoy.co', 'spreadshirt', 'merch.amazon', 'spring.com', 'designbyhumans.com'
-];
-
-/** Pure social—not checked for dead/redirect (low value, high false positives) */
-const SOCIAL_DOMAINS = [
-    'twitter.com', 'x.com', 'instagram.com', 'tiktok.com', 'facebook.com',
-    'discord.gg', 'discord.com', 'youtube.com', 'youtu.be', 'twitch.tv',
-    'linkedin.com', 'reddit.com'
-];
-
-/** Social with revenue—checked for dead/redirect (Patreon, Ko-fi, etc.) */
-const SOCIAL_WITH_REVENUE_DOMAINS = [
-    'patreon.com', 'ko-fi.com', 'buymeacoffee.com', 'github.com/sponsors',
-    'substack.com', 'kofi.com'
-];
+const AFFILIATE_DOMAINS = linkDomainsConfig.affiliateDomains as string[]
+const AFFILIATE_PARAMS = linkDomainsConfig.affiliateParams as string[]
+const SPONSOR_DOMAINS = linkDomainsConfig.sponsorDomains as string[]
+const MERCH_DOMAINS = linkDomainsConfig.merchDomains as string[]
+const SOCIAL_DOMAINS = linkDomainsConfig.socialDomains as string[]
+const SOCIAL_WITH_REVENUE_DOMAINS = linkDomainsConfig.socialWithRevenueDomains as string[]
 
 const hasDomain = (url: string, domains: string[]): boolean =>
     domains.some(d => url.toLowerCase().includes(d));
@@ -110,7 +87,7 @@ export const classifyLinks = (text: string, userSponsorDomains?: string[]): Cate
             categories.socials.push(link);
         }
         // 3. Affiliates
-        else if (hasDomain(l, AFFILIATE_DOMAINS) || hasParam(l, ['ref=', 'affiliate=', 'tag=', 'aid=', 'pid=', 'ref_='])) {
+        else if (hasDomain(l, AFFILIATE_DOMAINS) || hasParam(l, AFFILIATE_PARAMS)) {
             categories.affiliates.push(link);
         }
         // 3. Merch (domain-based)
@@ -131,6 +108,15 @@ export const classifyLinks = (text: string, userSponsorDomains?: string[]): Cate
 
 const PROMO_PARAMS = ['code', 'promo', 'coupon', 'discount', 'ref', 'aff'];
 const PROMO_PATH_REGEX = /\/discount\/([^/?#]+)|\/p\/([^/?#]+)/i;
+
+/** Links included in the dead/redirect check (excludes pure social like Twitch, Instagram) */
+export const getLinksToCheck = (links: CategorizedLinks): string[] => [
+    ...links.sponsors,
+    ...links.affiliates,
+    ...links.merch,
+    ...links.other,
+    ...links.socialWithRevenue
+];
 
 export const extractPromoCode = (url: string): string | null => {
     try {

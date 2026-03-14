@@ -169,7 +169,7 @@
         <button
           type="button"
           class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          @click="runLinkCheck"
+          @click="runLinkCheckWithParse"
         >
           Check {{ linksToCheckCount }} links
         </button>
@@ -199,7 +199,7 @@
       </div>
       <div v-if="linkCheckError" class="rounded-card px-4 py-3 flex items-center justify-between gap-3 bg-error-bg border border-error-border text-error-text">
         <span>{{ linkCheckError }}</span>
-        <button type="button" class="px-3 py-1 rounded-button text-sm font-medium bg-error-bg hover:opacity-90" @click="retryLinkCheck">
+        <button type="button" class="px-3 py-1 rounded-button text-sm font-medium bg-error-bg hover:opacity-90" @click="retryLinkCheckWithParse">
           Retry
         </button>
       </div>
@@ -220,6 +220,9 @@
 
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1 flex-wrap">
+              <span v-if="video.channelHandle" class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-card-bg border border-border-default text-text-muted">
+                @{{ video.channelHandle }}
+              </span>
               <span v-if="video.type !== 'video'" class="inline-flex px-2 py-0.5 rounded text-xs font-medium uppercase"
                 :class="video.type === 'short' ? 'bg-sponsor-bg text-sponsor-text border border-sponsor-border' : 'bg-affiliate-bg text-affiliate-text border border-affiliate-border'">
                 {{ video.type }}
@@ -346,9 +349,8 @@
 import { ref, computed, watch } from 'vue'
 import type { VideoDetails, VideoType } from '~~/types/youtube'
 import type { CategorizedLinks } from '~~/utils/url'
-import { normalizeUrl } from '~~/utils/url'
-import type { LinkCheckResult } from '~~/types/links'
-import { getCachedResult, setCachedResult, clearLinkCache } from '~~/utils/linkCache'
+import { getLinksToCheck } from '~~/utils/url'
+import { useLinkCheck } from '~~/composables/useLinkCheck'
 
 const props = defineProps<{
   videos: VideoDetails[]
@@ -365,7 +367,6 @@ const filterMySponsors = ref(false)
 const userSponsorsInput = ref('')
 const userSponsors = ref<string[]>([])
 const checkOnlyMySponsors = ref(false)
-const linkCheckError = ref('')
 const currentPage = ref(1)
 
 const parseUserSponsors = () => {
@@ -375,6 +376,36 @@ const parseUserSponsors = () => {
     .filter(Boolean)
 }
 
+const linkCheck = useLinkCheck(
+  () => props.videos,
+  {
+    userSponsors: () => userSponsors.value,
+    checkOnlyMySponsors: () => checkOnlyMySponsors.value
+  }
+)
+
+const {
+  linkResults,
+  isCheckingLinks,
+  linkCheckProgress,
+  linkCheckProgressPercent,
+  deadLinksCount,
+  redirectedLinksCount,
+  okLinksCount,
+  codeIssuesCount,
+  linkCheckError,
+  allLinksCount,
+  linksToCheckCount,
+  getLinkResult,
+  hasCodeIssue,
+  linkClass,
+  runLinkCheck,
+  retryLinkCheck,
+  exportCsv,
+  exportJson,
+  clearCache
+} = linkCheck
+
 const isUserSponsorLink = (url: string): boolean =>
   userSponsors.value.some(domain => url.toLowerCase().includes(domain))
 
@@ -382,74 +413,6 @@ const videoHasUserSponsorLinks = (video: VideoDetails): boolean => {
   const links = getLinksToCheck(video.links)
   return links.some(isUserSponsorLink)
 }
-const linkResults = ref<LinkCheckResult[]>([])
-const isCheckingLinks = ref(false)
-const linkCheckElapsed = ref(0)
-const linkCheckTotal = ref(0)
-let linkCheckTimer: ReturnType<typeof setInterval> | null = null
-
-/** ~200ms per link with 5-way parallel (was 900ms sequential) */
-const MS_PER_LINK = 200
-
-const linkCheckProgress = computed(() => {
-  if (!isCheckingLinks.value || linkCheckTotal.value === 0) return ''
-  const estTotalMs = linkCheckTotal.value * MS_PER_LINK
-  const remaining = Math.max(0, estTotalMs - linkCheckElapsed.value)
-  return `~${Math.ceil(remaining / 1000)}s remaining (${linkCheckTotal.value} links)`
-})
-
-const linkCheckProgressPercent = computed(() => {
-  if (!isCheckingLinks.value || linkCheckTotal.value === 0) return 0
-  const estTotalMs = linkCheckTotal.value * MS_PER_LINK
-  return Math.min(99, (linkCheckElapsed.value / estTotalMs) * 100)
-})
-
-const deadLinksCount = computed(() => linkResults.value.filter(r => r.category === 'dead').length)
-const redirectedLinksCount = computed(() => linkResults.value.filter(r => r.category === 'redirected').length)
-const okLinksCount = computed(() => linkResults.value.filter(r => r.category === 'ok').length)
-const codeIssuesCount = computed(() => linkResults.value.filter(r => r.codeMayBeInvalid).length)
-
-const getLinkResult = (url: string): LinkCheckResult | undefined =>
-  linkResults.value.find(r => normalizeUrl(r.url) === normalizeUrl(url))
-
-const hasCodeIssue = (url: string): boolean =>
-  getLinkResult(url)?.codeMayBeInvalid ?? false
-
-const linkClass = (url: string, defaultColor: string): string => {
-  const r = getLinkResult(url)
-  if (!r) return defaultColor
-  if (r.category === 'dead') return 'text-error-text line-through'
-  if (r.category === 'redirected') return 'text-alert-text'
-  return defaultColor
-}
-
-/** Links included in the dead/redirect check (excludes pure social like Twitch, Instagram) */
-const getLinksToCheck = (links: CategorizedLinks): string[] => [
-  ...links.sponsors,
-  ...links.affiliates,
-  ...links.merch,
-  ...links.other,
-  ...links.socialWithRevenue
-]
-
-const allLinksCount = computed(() => {
-  const seen = new Set<string>()
-  props.videos.forEach(v => {
-    getLinksToCheck(v.links).forEach(url => seen.add(url))
-  })
-  return seen.size
-})
-
-const linksToCheckCount = computed(() => {
-  if (!checkOnlyMySponsors.value || userSponsors.value.length === 0) return allLinksCount.value
-  const seen = new Set<string>()
-  props.videos.forEach(v => {
-    getLinksToCheck(v.links)
-      .filter(isUserSponsorLink)
-      .forEach(url => seen.add(url))
-  })
-  return seen.size
-})
 
 const hasMonetizationLinks = (links: CategorizedLinks): boolean => {
   const { sponsors, affiliates, merch, socialWithRevenue, other } = links
@@ -545,134 +508,15 @@ const needsAttentionCount = computed(() =>
   props.videos.filter(v => hasMonetizationLinks(v.links)).length
 )
 
-const retryLinkCheck = () => {
-  linkCheckError.value = ''
+const runLinkCheckWithParse = () => {
+  parseUserSponsors()
   runLinkCheck()
 }
 
-const runLinkCheck = async () => {
+const retryLinkCheckWithParse = () => {
   parseUserSponsors()
-  linkCheckError.value = ''
-
-  const urlToVideoIds = new Map<string, string[]>()
-
-  props.videos.forEach(video => {
-    getLinksToCheck(video.links)
-      .filter(url => !checkOnlyMySponsors.value || userSponsors.value.length === 0 || isUserSponsorLink(url))
-      .forEach(url => {
-        const existing = urlToVideoIds.get(url) ?? []
-        if (!existing.includes(video.id)) {
-          existing.push(video.id)
-          urlToVideoIds.set(url, existing)
-        }
-      })
-  })
-
-  const allUrls = [...urlToVideoIds.keys()]
-  const cached: LinkCheckResult[] = []
-  const toFetch: string[] = []
-
-  for (const url of allUrls) {
-    const c = getCachedResult(url)
-    if (c) cached.push(c)
-    else toFetch.push(url)
-  }
-
-  const merged = [...cached]
-  linkResults.value = merged
-
-  const checks = toFetch.map(url => ({ url, videoIds: urlToVideoIds.get(url) ?? [] }))
-  const totalLinks = checks.length
-
-  if (totalLinks === 0) return
-
-  isCheckingLinks.value = true
-  linkCheckTotal.value = totalLinks
-  linkCheckElapsed.value = 0
-
-  linkCheckTimer = setInterval(() => {
-    linkCheckElapsed.value += 200
-  }, 200)
-
-  try {
-    const res = await $fetch<{ linkResults: LinkCheckResult[] }>('/api/check-links', {
-      method: 'POST',
-      body: { checks }
-    })
-    const newResults = res.linkResults ?? []
-    for (const r of newResults) {
-      setCachedResult(r.url, r)
-      merged.push(r)
-    }
-    linkResults.value = merged
-  } catch (e: unknown) {
-    const err = e as { statusCode?: number; data?: { message?: string }; message?: string }
-    const status = err?.statusCode ?? (err as { status?: number })?.status
-    const msg = err?.data?.message ?? err?.message ?? 'Link check failed'
-
-    if (status === 429) {
-      linkCheckError.value = 'Rate limit reached. Please wait a minute and try again.'
-    } else if (err instanceof Error && err.message?.toLowerCase().includes('fetch')) {
-      linkCheckError.value = 'Network error. Check your connection and try again.'
-    } else {
-      linkCheckError.value = msg
-    }
-  } finally {
-    isCheckingLinks.value = false
-    linkCheckElapsed.value = 0
-    if (linkCheckTimer) {
-      clearInterval(linkCheckTimer)
-      linkCheckTimer = null
-    }
-  }
+  retryLinkCheck()
 }
 
-const exportCsv = () => {
-  const rows = linkResults.value.flatMap(r =>
-    (r.videoIds ?? []).map(vid => ({
-      url: r.url,
-      status: r.status,
-      category: r.category,
-      redirected: r.redirected,
-      codeMayBeInvalid: r.codeMayBeInvalid ?? false,
-      videoId: vid
-    }))
-  )
-  const csv = [
-    'url,status,category,redirected,codeMayBeInvalid,videoId',
-    ...rows.map(r => `"${r.url.replace(/"/g, '""')}",${r.status},${r.category},${r.redirected},${r.codeMayBeInvalid},${r.videoId}`)
-  ].join('\n')
-  downloadFile(csv, `yt-audit-links-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8')
-}
-
-const exportJson = () => {
-  const data = {
-    exportedAt: new Date().toISOString(),
-    linkResults: linkResults.value
-  }
-  downloadFile(JSON.stringify(data, null, 2), `yt-audit-links-${new Date().toISOString().slice(0, 10)}.json`, 'application/json')
-}
-
-const downloadFile = (content: string, filename: string, mime: string) => {
-  const blob = new Blob([content], { type: mime })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(a.href)
-}
-
-const clearCache = () => {
-  clearLinkCache()
-  linkResults.value = []
-}
-
-const formatViews = (n: number): string => {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
-  return String(n)
-}
-
-const formatDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+import { formatViews, formatDate } from '~~/utils/format'
 </script>
