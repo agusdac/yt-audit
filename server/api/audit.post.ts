@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
 
   let handles: string[]
   const session = await getUserSession(event)
-  const creatorUserId = session?.user?.id
+  const creatorUserId = (session?.user as { id?: string } | undefined)?.id
   const isAdmin = config.adminPassword && isAdminSessionValid(event, config)
 
   if (creatorUserId) {

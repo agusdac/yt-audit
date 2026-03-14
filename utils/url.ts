@@ -109,6 +109,20 @@ export const classifyLinks = (text: string, userSponsorDomains?: string[]): Cate
 const PROMO_PARAMS = ['code', 'promo', 'coupon', 'discount', 'ref', 'aff'];
 const PROMO_PATH_REGEX = /\/discount\/([^/?#]+)|\/p\/([^/?#]+)/i;
 
+export type LinkType = 'sponsor' | 'affiliate' | 'merch' | 'socialWithRevenue' | 'other'
+
+/** Classify a single URL into a link type (for revenue calculation) */
+export const getLinkType = (url: string, userSponsorDomains?: string[]): LinkType => {
+    const l = url.toLowerCase();
+    const allSponsorDomains = [...SPONSOR_DOMAINS, ...(userSponsorDomains ?? [])];
+    if (hasDomain(l, SOCIAL_WITH_REVENUE_DOMAINS)) return 'socialWithRevenue';
+    if (hasDomain(l, SOCIAL_DOMAINS)) return 'other'; // pure social not in getLinksToCheck, treat as other if somehow checked
+    if (hasDomain(l, AFFILIATE_DOMAINS) || hasParam(l, AFFILIATE_PARAMS)) return 'affiliate';
+    if (hasDomain(l, MERCH_DOMAINS) || /\/shop\b|\/store\b|\/merch\b/.test(l)) return 'merch';
+    if (hasDomain(l, allSponsorDomains)) return 'sponsor';
+    return 'other';
+};
+
 /** Links included in the dead/redirect check (excludes pure social like Twitch, Instagram) */
 export const getLinksToCheck = (links: CategorizedLinks): string[] => [
     ...links.sponsors,

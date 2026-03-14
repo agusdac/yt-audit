@@ -18,9 +18,12 @@ YT-Audit is a SaaS for YouTube creators to audit their video descriptions for de
 ### Admin Flow
 
 1. **Admin login (`/admin/login`)** — Password-based login, sets admin cookie
-2. **Admin (`/admin`)** — Channel searchbar to audit any handle(s), "Run Audit", VideoList, recent audits history
-3. **Audit** — POST `/api/audit` with `body: { handles: [...] }` (admin session allows arbitrary handles)
-4. **Link check** — Same as creator; admin session is accepted
+2. **Admin (`/admin`)** — Redirects to `/admin/audit`
+3. **Run Audit (`/admin/audit`)** — Channel searchbar to audit any handle(s), "Run Audit", VideoList
+4. **History (`/admin/history`)** — Recent audits list; placeholder for future historical tracking
+5. **Back to app** — Header link to `/` (main landing)
+6. **Audit** — POST `/api/audit` with `body: { handles: [...] }` (admin session allows arbitrary handles)
+7. **Link check** — Same as creator; admin session is accepted
 
 ### API Access
 

@@ -1,4 +1,4 @@
-import { VideoSummary } from "~~/types/youtube"
+import type { VideoSummary } from "~~/types/youtube"
 import { getPlaylistVideos } from "../service/youtubeService"
 
 export default defineEventHandler(async (event) => {

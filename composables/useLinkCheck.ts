@@ -31,7 +31,8 @@ export function useLinkCheck(
   })
 
   const linksToCheckCount = computed(() => {
-    if (!options.checkOnlyMySponsors() || options.userSponsors().length === 0) return allLinksCount.value
+    const sponsors = options.userSponsors()
+    if (!options.checkOnlyMySponsors() || sponsors.length === 0) return allLinksCount.value
     const seen = new Set<string>()
     videos().forEach(v => {
       getLinksToCheck(v.links)

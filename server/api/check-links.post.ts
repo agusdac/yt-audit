@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const session = await getUserSession(event)
-  const creatorUserId = session?.user?.id
+  const creatorUserId = (session?.user as { id?: string } | undefined)?.id
   const { isAdminSessionValid } = await import('../utils/adminAuth')
   const isAdmin = config.adminPassword && isAdminSessionValid(event, config)
   if (!creatorUserId && !isAdmin && !apiKey) {

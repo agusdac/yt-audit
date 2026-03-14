@@ -42,7 +42,7 @@ const login = async () => {
       method: 'POST',
       body: { password: password.value }
     })
-    await navigateTo('/admin')
+    await navigateTo('/admin/audit')
   } catch (e: unknown) {
     const err = e as { data?: { message?: string }; message?: string }
     error.value = err?.data?.message ?? err?.message ?? 'Login failed'

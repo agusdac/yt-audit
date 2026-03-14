@@ -2,7 +2,7 @@ import { getUserById, getLinkedChannels } from '~~/server/service/userService'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
-  const userId = session?.user?.id
+  const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) {
     throw createError({ statusCode: 401, message: 'Unauthorized' })
   }

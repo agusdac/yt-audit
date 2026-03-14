@@ -9,8 +9,8 @@ export const getUploadsPlaylistId = async (handle: string, ytApiKey: string) => 
     return data.items[0]!.contentDetails.relatedPlaylists.uploads
 }
 
-export const getPlaylistVideos = async (playlistId: string, ytApiKey: string, nextPageToken: string | undefined) => {
-    const data: YouTubePlaylistResponse = await $fetch(
+export const getPlaylistVideos = async (playlistId: string, ytApiKey: string, nextPageToken: string | undefined): Promise<YouTubePlaylistResponse> => {
+    const data = await $fetch<YouTubePlaylistResponse>(
         'https://www.googleapis.com/youtube/v3/playlistItems',
         {
             query: {
@@ -22,7 +22,7 @@ export const getPlaylistVideos = async (playlistId: string, ytApiKey: string, ne
             }
         }
     )
-    return data
+    return data as YouTubePlaylistResponse
 }
 
 export const getVideoDetails = async (chunkedIds: string, ytApiKey: string) => {

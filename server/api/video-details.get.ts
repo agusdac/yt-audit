@@ -1,4 +1,4 @@
-import { VideoDetails } from "~~/types/youtube"
+import type { VideoDetails } from "~~/types/youtube"
 import { getPlaylistVideos, getVideoDetails } from "../service/youtubeService"
 import { classifyLinks, extractUrls } from "~~/utils/url"
 import { parseISO8601ToSeconds, getVideoType } from "~~/utils/duration"
