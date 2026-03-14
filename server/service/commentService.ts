@@ -111,3 +111,54 @@ export async function fetchCommentsForVideo(
 
   return results
 }
+
+/** Fetch raw comments (no purchase-intent filter) for a video. Used for admin export. */
+export async function fetchRawCommentsForVideo(
+  videoId: string,
+  videoTitle: string,
+  ytApiKey: string,
+  maxPages = 2
+): Promise<YouTubeComment[]> {
+  const results: YouTubeComment[] = []
+  let pageToken: string | undefined
+
+  for (let page = 0; page < maxPages; page++) {
+    const url = 'https://www.googleapis.com/youtube/v3/commentThreads'
+    const params = new URLSearchParams({
+      part: 'snippet',
+      videoId,
+      maxResults: '100',
+      key: ytApiKey,
+      order: 'relevance',
+      textFormat: 'plainText'
+    })
+    if (pageToken) params.set('pageToken', pageToken)
+
+    const data = await $fetch<CommentThreadsResponse>(`${url}?${params}`)
+
+    if (!data.items?.length) break
+
+    for (const item of data.items) {
+      const top = item.snippet?.topLevelComment?.snippet
+      if (!top) continue
+
+      const text = top.textDisplay?.replace(/<[^>]+>/g, '') || ''
+      const topLevel = item.snippet?.topLevelComment
+      const commentId = topLevel?.id ?? item.id
+      results.push({
+        id: commentId,
+        videoId,
+        videoTitle,
+        text,
+        authorDisplayName: top.authorDisplayName ?? '',
+        publishedAt: top.publishedAt ?? '',
+        permalink: `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`
+      })
+    }
+
+    pageToken = data.nextPageToken
+    if (!pageToken) break
+  }
+
+  return results
+}
