@@ -75,7 +75,8 @@ export default defineTask({
               deadLinks: deadLinks.map((r) => ({
                 url: r.url,
                 videoCount: r.videoIds?.length ?? 0
-              }))
+              })),
+              siteUrl: String(config.public?.siteUrl || process.env.NUXT_PUBLIC_SITE_URL || '')
             })
           } catch {
             // ignore
@@ -104,10 +105,11 @@ export default defineTask({
     return {
       result: {
         ok: true,
+        error: '',
         processed: results.length,
         scheduledTime: payload?.scheduledTime,
         results
       }
-    }
+    } as { result: { ok: boolean; error: string; processed: number; scheduledTime?: unknown; results?: Array<{ userId: string; email: string; channels: string[]; deadLinks: number; emailed: boolean }> } }
   }
 })

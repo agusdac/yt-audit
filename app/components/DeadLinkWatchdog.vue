@@ -10,20 +10,21 @@
       <span class="text-error-text text-xl transition-transform" :class="sectionOpen ? 'rotate-180' : ''">▼</span>
     </button>
     <div v-show="sectionOpen" class="p-6 pt-0 space-y-4">
-    <div v-for="item in visibleItems" :key="item.url" class="rounded-lg p-4 bg-card-bg border border-error-border space-y-3">
-      <p class="text-sm text-error-text line-through break-all font-mono">{{ item.url }}</p>
+    <div v-for="item in visibleItems" :key="item.url" class="rounded-lg p-4 bg-card-bg border border-error-border space-y-3 relative">
+      <NuxtLink
+        v-if="item.firstVideoId && props.viewVideosHref"
+        :to="`${props.viewVideosHref}?videoId=${item.firstVideoId}`"
+        class="absolute top-3 right-3 text-xs text-text-muted hover:text-hover-link truncate max-w-[120px] block text-right"
+        :title="item.firstVideoTitle || 'View video'"
+      >
+        {{ item.firstVideoTitle || 'View video' }}
+      </NuxtLink>
+      <p class="text-sm text-error-text line-through break-all font-mono pr-24">{{ item.url }}</p>
       <p class="text-sm text-text-muted">
         {{ item.videoIds.length }} video{{ item.videoIds.length > 1 ? 's' : '' }} affected
         · ~${{ Math.round(item.revenueLoss) }}/month estimated loss
       </p>
       <div class="flex flex-wrap gap-2 items-center">
-        <NuxtLink
-          v-if="item.firstVideoId && props.viewVideosHref"
-          :to="`${props.viewVideosHref}?videoId=${item.firstVideoId}`"
-          class="text-xs text-text-muted hover:text-hover-link underline truncate max-w-[180px]"
-        >
-          {{ item.firstVideoTitle || 'View video' }}
-        </NuxtLink>
         <a
           v-if="item.firstVideoId"
           :href="studioUrl(item.firstVideoId)"
@@ -37,9 +38,9 @@
           v-if="item.firstVideoId"
           type="button"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-          @click="copyStudioLink(item.firstVideoId)"
+          @click="copyStudioLink(item)"
         >
-          Copy link
+          {{ copiedVideoId === item.firstVideoId ? 'Copied!' : 'Copy link' }}
         </button>
       </div>
     </div>
@@ -78,6 +79,8 @@ const props = withDefaults(
 
 const sectionOpen = ref(true)
 const expanded = ref(false)
+const copiedVideoId = ref<string | null>(null)
+let copyFeedbackTimeout: ReturnType<typeof setTimeout> | null = null
 
 const hasMore = computed(
   () => props.maxVisible != null && props.items.length > props.maxVisible
@@ -92,9 +95,16 @@ const visibleItems = computed(() => {
 
 const studioUrl = (videoId: string) => `https://studio.youtube.com/video/${videoId}/edit`
 
-const copyStudioLink = async (videoId: string) => {
+const copyStudioLink = async (item: { firstVideoId?: string }) => {
+  const videoId = item.firstVideoId
+  if (!videoId) return
   const url = studioUrl(videoId)
   await navigator.clipboard.writeText(url)
-  // Could add toast feedback
+  copiedVideoId.value = videoId
+  if (copyFeedbackTimeout) clearTimeout(copyFeedbackTimeout)
+  copyFeedbackTimeout = setTimeout(() => {
+    copiedVideoId.value = null
+    copyFeedbackTimeout = null
+  }, 2000)
 }
 </script>

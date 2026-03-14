@@ -54,7 +54,8 @@ export default defineEventHandler(async (event) => {
         deadLinks: deadLinks.map((r) => ({
           url: r.url,
           videoCount: r.videoIds?.length ?? 0
-        }))
+        })),
+        siteUrl: (config.public as { siteUrl?: string })?.siteUrl || process.env.NUXT_PUBLIC_SITE_URL || ''
       })
     } catch {
       // ignore email errors

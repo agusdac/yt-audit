@@ -55,6 +55,8 @@
           :on-run-audit="store.runAudit"
           :on-fetch-comments="store.fetchComments"
           :on-clear-error="store.clearError"
+          :scheduled-audit-enabled="store.creatorSettings?.scheduledAuditEnabled"
+          :scheduled-audit-frequency="store.creatorSettings?.scheduledAuditFrequency"
         />
       </template>
     </template>
@@ -70,6 +72,7 @@ definePageMeta({
   middleware: 'auth',
   layout: 'creator'
 })
+useSeoMeta({ title: 'Dashboard | YT-Audit' })
 
 const store = useCreatorWorkspaceStore()
 

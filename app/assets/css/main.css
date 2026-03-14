@@ -110,4 +110,34 @@ body {
   --color-filter-bg: rgba(0, 0, 0, 0.05);
   --color-filter-bg-hover: rgba(0, 0, 0, 0.08);
   --color-stat-bg: rgba(0, 0, 0, 0.03);
+  /* Error - darker red for visibility */
+  --color-error-bg: rgba(185, 28, 28, 0.15);
+  --color-error-border: rgba(185, 28, 28, 0.5);
+  --color-error-text: #b91c1c;
+  /* Alert - darker amber */
+  --color-alert-bg: rgba(180, 83, 9, 0.15);
+  --color-alert-border: rgba(180, 83, 9, 0.5);
+  --color-alert-text: #b45309;
+  --color-alert-text-muted: rgba(180, 83, 9, 0.85);
+  /* Sponsor, affiliate, merch */
+  --color-sponsor-bg: rgba(185, 28, 28, 0.15);
+  --color-sponsor-text: #b91c1c;
+  --color-sponsor-border: rgba(185, 28, 28, 0.5);
+  --color-sponsor-link: #dc2626;
+  --color-affiliate-bg: rgba(180, 83, 9, 0.2);
+  --color-affiliate-text: #b45309;
+  --color-affiliate-border: rgba(180, 83, 9, 0.5);
+  --color-affiliate-link: #d97706;
+  --color-merch-bg: rgba(5, 150, 105, 0.2);
+  --color-merch-text: #047857;
+  --color-merch-border: rgba(5, 150, 105, 0.5);
+  --color-merch-link: #059669;
+  /* Filter stats */
+  --color-filter-bg-active: rgba(180, 83, 9, 0.2);
+  --color-filter-border-active: rgba(180, 83, 9, 0.5);
+  --color-filter-text-active: #b45309;
+  --color-stat-attention-bg: rgba(180, 83, 9, 0.15);
+  --color-stat-attention-border: rgba(180, 83, 9, 0.5);
+  --color-stat-attention-text: #b45309;
+  --color-stat-attention-label: rgba(180, 83, 9, 0.9);
 }

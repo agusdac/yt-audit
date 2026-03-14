@@ -106,7 +106,28 @@
           </div>
         </div>
 
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-1 space-y-4">
+          <div class="rounded-card p-4 bg-card-bg border-2 border-border-default">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xl">📧</span>
+              <h3 class="font-semibold text-text-primary">Scheduled audit emails</h3>
+            </div>
+            <p class="text-sm text-text-muted mb-3">
+              Get dead-link alerts by email so you never miss a broken link.
+            </p>
+            <p v-if="props.scheduledAuditEnabled" class="text-sm font-medium text-merch-link mb-2">
+              Enabled · {{ props.scheduledAuditFrequency === 'monthly' ? 'Monthly' : 'Weekly' }}
+            </p>
+            <p v-else class="text-sm text-text-muted mb-2">
+              Not enabled
+            </p>
+            <NuxtLink
+              to="/settings"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+            >
+              Manage in Settings →
+            </NuxtLink>
+          </div>
           <HighIntentWidget
             :comments-status="props.commentsStatus"
             :high-intent-comments="props.highIntentComments"
@@ -148,6 +169,8 @@ const props = withDefaults(
     error: string | null
     viewVideosHref: string
     viewCommentsHref: string
+    scheduledAuditEnabled?: boolean
+    scheduledAuditFrequency?: 'weekly' | 'monthly'
     maxVisibleDeadLinks?: number
     onRunAudit?: () => void
     onRunLinkCheck?: () => void

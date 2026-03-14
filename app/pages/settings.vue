@@ -12,6 +12,12 @@
       <button type="button" class="ml-auto px-3 py-1 rounded-button text-sm" @click="store.clearError">Dismiss</button>
     </div>
 
+    <div v-if="successMessage"
+      class="rounded-card px-4 py-3 flex items-center gap-3 bg-green-500/20 border border-green-500/50 text-green-700 dark:text-green-400 mb-6">
+      <span class="text-2xl">&#10003;</span>
+      <span>{{ successMessage }}</span>
+    </div>
+
     <div class="rounded-card p-6 bg-card-bg border border-border-default space-y-6">
       <div>
         <label class="block text-sm font-medium text-text-primary mb-1">Sponsor CPM ($/1000 views)</label>
@@ -77,7 +83,8 @@
           Save
         </button>
         <button type="button"
-          class="px-6 py-2 rounded-button font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+          class="px-6 py-2 rounded-button font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="saving"
           @click="reset">
           Reset to defaults
         </button>
@@ -94,8 +101,11 @@ definePageMeta({
   middleware: 'auth',
   layout: 'creator'
 })
+useSeoMeta({ title: 'Settings | YT-Audit' })
 
 const store = useCreatorWorkspaceStore()
+const successMessage = ref<string | null>(null)
+const saving = ref(false)
 const form = ref({
   cpmSponsor: undefined as number | undefined,
   ctrAffiliate: undefined as number | undefined,
@@ -122,7 +132,10 @@ onMounted(async () => {
   }
 })
 
+let successTimeout: ReturnType<typeof setTimeout> | null = null
+
 const save = async () => {
+  successMessage.value = null
   const s = form.value
   const settings: Record<string, number | string[] | boolean | 'weekly' | 'monthly'> = {}
   if (typeof s.cpmSponsor === 'number') settings.cpmSponsor = s.cpmSponsor
@@ -133,11 +146,52 @@ const save = async () => {
   if (domains.length > 0) settings.sponsorDomains = domains
   settings.scheduledAuditEnabled = s.scheduledAuditEnabled
   if (s.scheduledAuditEnabled) settings.scheduledAuditFrequency = s.scheduledAuditFrequency
-  await store.saveCreatorSettings(settings)
+  saving.value = true
+  try {
+    const ok = await store.saveCreatorSettings(settings)
+    if (ok) {
+      successMessage.value = 'Settings saved successfully'
+      if (successTimeout) clearTimeout(successTimeout)
+      successTimeout = setTimeout(() => {
+        successMessage.value = null
+        successTimeout = null
+      }, 4000)
+    }
+  } finally {
+    saving.value = false
+  }
 }
 
-const reset = () => {
-  form.value = { sponsorDomains: '', scheduledAuditEnabled: false, scheduledAuditFrequency: 'weekly', cpmSponsor: undefined, ctrAffiliate: undefined, convAffiliate: undefined, avgCommission: undefined }
-  store.saveCreatorSettings({})
+const reset = async () => {
+  successMessage.value = null
+  saving.value = true
+  try {
+    const ok = await store.saveCreatorSettings({})
+    await store.loadCreatorSettings()
+    if (ok) {
+      successMessage.value = 'Settings reset to defaults'
+      if (successTimeout) clearTimeout(successTimeout)
+      successTimeout = setTimeout(() => {
+        successMessage.value = null
+        successTimeout = null
+      }, 4000)
+    }
+    if (store.creatorSettings) {
+      form.value = {
+        ...store.creatorSettings,
+        sponsorDomains: store.creatorSettings.sponsorDomains?.join(', ') ?? '',
+        scheduledAuditEnabled: store.creatorSettings.scheduledAuditEnabled ?? false,
+        scheduledAuditFrequency: store.creatorSettings.scheduledAuditFrequency ?? 'weekly',
+        cpmSponsor: store.creatorSettings.cpmSponsor ?? undefined,
+        ctrAffiliate: store.creatorSettings.ctrAffiliate ?? undefined,
+        convAffiliate: store.creatorSettings.convAffiliate ?? undefined,
+        avgCommission: store.creatorSettings.avgCommission ?? undefined,
+      }
+    } else {
+      form.value = { sponsorDomains: '', scheduledAuditEnabled: false, scheduledAuditFrequency: 'weekly', cpmSponsor: undefined, ctrAffiliate: undefined, convAffiliate: undefined, avgCommission: undefined }
+    }
+  } finally {
+    saving.value = false
+  }
 }
 </script>

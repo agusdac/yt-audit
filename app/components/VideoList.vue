@@ -54,7 +54,6 @@
         </div>
       </div>
     </div>
-    </div>
 
     <div v-if="(deadLinksWithRevenue.length > 0 || redirectedLinksWithRevenue.length > 0) && hasAnyReplacement"
       class="rounded-card p-4 bg-filter-bg border border-border-default">
@@ -305,6 +304,7 @@
         </button>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">

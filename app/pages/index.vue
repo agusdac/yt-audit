@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+useSeoMeta({ title: 'Link Audit for YouTube Creators | YT-Audit' })
 const { loggedIn, ready } = useUserSession()
 
 watch([ready, loggedIn], ([r, logged]) => {

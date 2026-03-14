@@ -207,12 +207,16 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       }
     },
 
-    async saveCreatorSettings(settings: { cpmSponsor?: number; ctrAffiliate?: number; convAffiliate?: number; avgCommission?: number; sponsorDomains?: string[]; scheduledAuditEnabled?: boolean; scheduledAuditFrequency?: 'weekly' | 'monthly' }) {
+    async saveCreatorSettings(settings: { cpmSponsor?: number; ctrAffiliate?: number; convAffiliate?: number; avgCommission?: number; sponsorDomains?: string[]; scheduledAuditEnabled?: boolean; scheduledAuditFrequency?: 'weekly' | 'monthly' }): Promise<boolean> {
       try {
         await $fetch('/api/settings', { method: 'POST', body: settings })
         this.creatorSettings = this.creatorSettings ? { ...this.creatorSettings, ...settings } : settings
-      } catch {
-        // ignore
+        this.error = null
+        return true
+      } catch (e: unknown) {
+        const err = e as { data?: { message?: string }; message?: string }
+        this.error = err?.data?.message ?? err?.message ?? 'Failed to save settings'
+        return false
       }
     }
   }

@@ -22,6 +22,7 @@ export default defineNuxtConfig({
     public: {
       autoRunAuditOnLogin: process.env.AUTO_RUN_AUDIT_ON_LOGIN !== 'false',
       auditCacheTtlHours: Number(process.env.AUDIT_CACHE_TTL_HOURS) || 24,
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || '',
     },
     oauth: {
       google: {

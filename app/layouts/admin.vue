@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen font-sans bg-page-bg text-text-primary">
-    <header class="border-b border-border-default bg-card-bg">
+  <div class="min-h-screen font-sans bg-page-bg text-text-primary flex flex-col">
+    <header class="flex-shrink-0 border-b border-border-default bg-card-bg">
       <div class="max-w-4xl mx-auto px-6 py-4">
         <div class="flex items-center justify-between flex-wrap gap-4">
           <div class="flex items-center gap-6">
@@ -63,7 +63,7 @@
         </div>
       </div>
     </header>
-    <main>
+    <main class="flex-1 min-h-0 overflow-y-auto">
       <slot />
     </main>
   </div>
