@@ -23,13 +23,15 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
     videos: [] as VideoDetails[],
     linkResults: [] as LinkCheckResult[],
     highIntentComments: [] as HighIntentComment[],
+    answeredCommentIds: [] as string[],
     hasCommentsLoaded: false,
     lastAuditAt: null as Date | null,
     isLoading: false,
     isCheckingLinks: false,
     isFetchingComments: false,
     error: null as string | null,
-    me: null as MeData | null
+    me: null as MeData | null,
+    creatorSettings: null as { cpmSponsor?: number; ctrAffiliate?: number; convAffiliate?: number; avgCommission?: number; sponsorDomains?: string[]; scheduledAuditEnabled?: boolean; scheduledAuditFrequency?: 'weekly' | 'monthly' } | null
   }),
 
   getters: {
@@ -119,13 +121,13 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       if (!channels?.length) return null
 
       try {
-        const data = await $fetch<{ cached: boolean; videos: VideoDetails[]; linkResults: LinkCheckResult[] }>(
+        const data = await $fetch<{ cached: boolean; videos: VideoDetails[]; linkResults: LinkCheckResult[]; cachedAt?: number }>(
           '/api/audit-cache'
         )
         if (data.cached && data.videos.length > 0) {
           this.videos = data.videos
           this.linkResults = data.linkResults ?? []
-          this.lastAuditAt = new Date()
+          this.lastAuditAt = data.cachedAt ? new Date(data.cachedAt * 1000) : new Date()
           return true
         }
       } catch {
@@ -140,11 +142,13 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
 
     async loadCommentsFromCache() {
       try {
-        const res = await $fetch<{ highIntentComments: HighIntentComment[] }>('/api/comments')
+        const res = await $fetch<{ highIntentComments: HighIntentComment[]; answeredCommentIds?: string[] }>('/api/comments')
         this.highIntentComments = res.highIntentComments ?? []
+        this.answeredCommentIds = res.answeredCommentIds ?? []
         this.hasCommentsLoaded = true
       } catch {
         this.highIntentComments = []
+        this.answeredCommentIds = []
       }
     },
 
@@ -154,19 +158,32 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       this.isFetchingComments = true
       this.error = null
       try {
-        const res = await $fetch<{ highIntentComments: HighIntentComment[] }>('/api/comments.fetch', {
+        const res = await $fetch<{ highIntentComments: HighIntentComment[]; answeredCommentIds?: string[] }>('/api/comments.fetch', {
           method: 'POST',
           body: {
             videos: this.videos.map((v) => ({ id: v.id, title: v.title }))
           }
         })
         this.highIntentComments = res.highIntentComments ?? []
+        this.answeredCommentIds = res.answeredCommentIds ?? []
         this.hasCommentsLoaded = true
       } catch (e: unknown) {
         const err = e as { data?: { message?: string }; message?: string }
         this.error = err?.data?.message ?? err?.message ?? 'Failed to fetch comments.'
       } finally {
         this.isFetchingComments = false
+      }
+    },
+
+    async markCommentAsAnswered(commentId: string, answered: boolean) {
+      try {
+        const res = await $fetch<{ answeredCommentIds: string[] }>('/api/comments.mark-answered', {
+          method: 'POST',
+          body: { commentId, answered }
+        })
+        this.answeredCommentIds = res.answeredCommentIds ?? []
+      } catch {
+        // ignore
       }
     },
 
@@ -178,6 +195,24 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       } catch {
         this.me = null
         return null
+      }
+    },
+
+    async loadCreatorSettings() {
+      try {
+        const res = await $fetch<{ settings: { cpmSponsor?: number; ctrAffiliate?: number; convAffiliate?: number; avgCommission?: number; sponsorDomains?: string[]; scheduledAuditEnabled?: boolean; scheduledAuditFrequency?: 'weekly' | 'monthly' } }>('/api/settings')
+        this.creatorSettings = res.settings && Object.keys(res.settings).length > 0 ? res.settings : null
+      } catch {
+        this.creatorSettings = null
+      }
+    },
+
+    async saveCreatorSettings(settings: { cpmSponsor?: number; ctrAffiliate?: number; convAffiliate?: number; avgCommission?: number; sponsorDomains?: string[]; scheduledAuditEnabled?: boolean; scheduledAuditFrequency?: 'weekly' | 'monthly' }) {
+      try {
+        await $fetch('/api/settings', { method: 'POST', body: settings })
+        this.creatorSettings = this.creatorSettings ? { ...this.creatorSettings, ...settings } : settings
+      } catch {
+        // ignore
       }
     }
   }

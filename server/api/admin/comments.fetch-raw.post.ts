@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Admin access required' })
   }
 
-  const body = await readBody<{ handles: string[] }>(event)
+  const body = await readBody<{ handles: string[]; highIntentOnly?: boolean }>(event)
   if (!body?.handles || !Array.isArray(body.handles) || body.handles.length === 0) {
     throw createError({ statusCode: 400, message: 'handles array is required' })
   }
@@ -30,11 +30,14 @@ export default defineEventHandler(async (event) => {
 
   const allComments: YouTubeComment[] = []
 
+  const useHighIntent = body.highIntentOnly === true
+  const fetchFn = useHighIntent ? fetchRawCommentsForVideo : fetchRawCommentsForVideo
+
   for (const video of videos) {
     if (allComments.length >= TARGET_COMMENT_COUNT) break
 
     try {
-      const comments = await fetchRawCommentsForVideo(video.id, video.title, config.ytApiKey)
+      const comments = await fetchFn(video.id, video.title, config.ytApiKey)
       const remaining = TARGET_COMMENT_COUNT - allComments.length
       allComments.push(...comments.slice(0, remaining))
     } catch {

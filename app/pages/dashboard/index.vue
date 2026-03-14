@@ -38,6 +38,7 @@
           :high-intent-comments="store.highIntentComments"
           :total-revenue-loss="totalRevenueLoss"
           :dead-links-with-revenue="deadLinksWithRevenue"
+          :top-videos-by-revenue-loss="topVideosByRevenueLoss"
           :dead-links-count="store.deadLinksCount"
           :videos-affected-by-dead-links="videosAffectedByDeadLinks"
           :videos-affected-by-comments="videosAffectedByComments"
@@ -47,6 +48,7 @@
           :comments-status="commentsStatus"
           :has-videos="store.hasVideos"
           :last-audit-at="store.lastAuditAt"
+          :is-cache-stale="isCacheStale"
           :error="store.error"
           view-videos-href="/videos"
           view-comments-href="/comments"
@@ -61,7 +63,7 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { getRevenueLossForLink } from '~~/utils/revenue'
+import { getRevenueLossForLink, estimateMonthlyViews } from '~~/utils/revenue'
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 
 definePageMeta({
@@ -73,6 +75,7 @@ const store = useCreatorWorkspaceStore()
 
 onMounted(() => {
   if (store.hasVideos) store.loadCommentsFromCache()
+  store.loadCreatorSettings()
 })
 
 watch(() => store.hasVideos, (hasVideos) => {
@@ -85,7 +88,7 @@ const deadLinksWithRevenue = computed(() => {
   const dead = store.linkResults.filter((r) => r.category === 'dead')
   const videoMap = new Map(store.videos.map((v) => [v.id, v]))
   return dead.map((r) => {
-    const { revenueLoss } = getRevenueLossForLink(r, store.videos, { userSponsors: [] })
+    const { revenueLoss } = getRevenueLossForLink(r, store.videos, { userSponsors: store.creatorSettings?.sponsorDomains ?? [], creatorSettings: store.creatorSettings ?? undefined })
     const firstVideoId = (r.videoIds ?? [])[0]
     const firstVideo = firstVideoId ? videoMap.get(firstVideoId) : undefined
     return {
@@ -116,10 +119,40 @@ const totalRevenueLoss = computed(() =>
   deadLinksWithRevenue.value.reduce((sum, i) => sum + i.revenueLoss, 0)
 )
 
+const topVideosByRevenueLoss = computed(() => {
+  const videoToLoss = new Map<string, number>()
+  for (const item of deadLinksWithRevenue.value) {
+    const videos = item.videoIds
+      .map((id) => store.videos.find((v) => v.id === id))
+      .filter((v): v is NonNullable<typeof v> => !!v)
+    const totalViews = videos.reduce((s, v) => s + estimateMonthlyViews(v.viewCount, v.publishedAt), 0)
+    if (totalViews <= 0) continue
+    for (const v of videos) {
+      const share = estimateMonthlyViews(v.viewCount, v.publishedAt) / totalViews
+      videoToLoss.set(v.id, (videoToLoss.get(v.id) ?? 0) + item.revenueLoss * share)
+    }
+  }
+  return [...videoToLoss.entries()]
+    .map(([videoId, revenueLoss]) => {
+      const v = store.videos.find((x) => x.id === videoId)
+      return { videoId, title: v?.title ?? 'Unknown', revenueLoss }
+    })
+    .sort((a, b) => b.revenueLoss - a.revenueLoss)
+    .slice(0, 10)
+})
+
 const commentsStatus = computed(() => {
   if (store.isFetchingComments) return 'loading'
   if (store.highIntentComments.length > 0) return 'hasComments'
   if (store.hasCommentsLoaded) return 'none'
   return 'idle'
+})
+
+const config = useRuntimeConfig()
+const auditCacheTtlHours = config.public?.auditCacheTtlHours ?? 24
+const isCacheStale = computed(() => {
+  if (!store.lastAuditAt) return false
+  const ageHours = (Date.now() - store.lastAuditAt.getTime()) / (1000 * 60 * 60)
+  return ageHours >= auditCacheTtlHours
 })
 </script>

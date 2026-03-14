@@ -1,8 +1,8 @@
 import { getLinkedChannels } from '~~/server/service/userService'
 import { getCachedComments, setCachedComments } from '~~/server/service/commentCacheService'
 import { fetchCommentsForVideo } from '~~/server/service/commentService'
+import { getAnsweredCommentIds } from '~~/server/service/answeredCommentsService'
 import type { YouTubeComment } from '~~/server/service/commentService'
-
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
@@ -27,16 +27,20 @@ export default defineEventHandler(async (event) => {
   const handles = channels.map((c) => c.handle)
 
   const cached = handles.length > 0 ? await getCachedComments(userId, handles) : null
+  const answeredCommentIds = await getAnsweredCommentIds(userId)
   if (cached !== null) {
-    return { highIntentComments: cached }
+    return { highIntentComments: cached, answeredCommentIds }
   }
 
   const videosToFetch = body.videos.slice(0, maxVideos)
   const allComments: YouTubeComment[] = []
+  const hfOptions = config.detectIntentViaHf && config.hfToken
+    ? { useHF: true, hfToken: config.hfToken }
+    : undefined
 
   for (const video of videosToFetch) {
     try {
-      const comments = await fetchCommentsForVideo(video.id, video.title, ytApiKey)
+      const comments = await fetchCommentsForVideo(video.id, video.title, ytApiKey, 3, hfOptions)
       allComments.push(...comments)
     } catch {
       // Skip videos that fail (e.g. comments disabled)
@@ -47,5 +51,5 @@ export default defineEventHandler(async (event) => {
     await setCachedComments(userId, handles, allComments)
   }
 
-  return { highIntentComments: allComments }
+  return { highIntentComments: allComments, answeredCommentIds }
 })

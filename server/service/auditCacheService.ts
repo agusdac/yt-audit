@@ -27,7 +27,8 @@ export async function getCachedAudit(
 
   return {
     videos: row.videos as VideoDetails[],
-    linkResults: row.linkResults as LinkCheckResult[]
+    linkResults: row.linkResults as LinkCheckResult[],
+    cachedAt: row.cachedAt
   }
 }
 

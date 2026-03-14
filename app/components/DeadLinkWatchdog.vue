@@ -1,6 +1,15 @@
 <template>
-  <div v-if="items.length > 0" class="rounded-card p-6 bg-error-bg/40 border-2 border-error-border space-y-4">
-    <h3 class="font-bold text-lg text-error-text">Dead links — fix these first</h3>
+  <div v-if="items.length > 0" class="rounded-card bg-error-bg/40 border-2 border-error-border overflow-hidden">
+    <button
+      type="button"
+      class="w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-error-bg/30 transition-colors"
+      @click="sectionOpen = !sectionOpen"
+    >
+      <h3 class="font-bold text-lg text-error-text">Dead links — fix these first</h3>
+      <span class="text-sm text-error-text/80">{{ items.length }} link{{ items.length > 1 ? 's' : '' }}</span>
+      <span class="text-error-text text-xl transition-transform" :class="sectionOpen ? 'rotate-180' : ''">▼</span>
+    </button>
+    <div v-show="sectionOpen" class="p-6 pt-0 space-y-4">
     <div v-for="item in visibleItems" :key="item.url" class="rounded-lg p-4 bg-card-bg border border-error-border space-y-3">
       <p class="text-sm text-error-text line-through break-all font-mono">{{ item.url }}</p>
       <p class="text-sm text-text-muted">
@@ -50,6 +59,7 @@
     >
       Show less
     </button>
+    </div>
   </div>
 </template>
 
@@ -66,6 +76,7 @@ const props = withDefaults(
 )
 
 
+const sectionOpen = ref(true)
 const expanded = ref(false)
 
 const hasMore = computed(

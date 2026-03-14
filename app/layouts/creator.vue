@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen font-sans bg-page-bg text-text-primary flex">
-    <aside class="w-60 flex-shrink-0 border-r border-border-default bg-card-bg flex flex-col">
+  <div class="min-h-screen font-sans bg-page-bg text-text-primary flex flex-col md:flex-row">
+    <aside class="w-full md:w-60 flex-shrink-0 border-r border-border-default bg-card-bg flex flex-col">
       <div class="p-4 border-b border-border-default">
         <NuxtLink to="/dashboard" class="flex items-center gap-2">
           <span
@@ -50,6 +50,16 @@
           </svg>
           Comments
         </NuxtLink>
+        <NuxtLink to="/settings"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-button text-sm font-medium transition-colors"
+          :class="$route.path === '/settings' ? 'bg-filter-bg-active border border-filter-border-active text-filter-text-active' : 'text-text-muted hover:text-text-primary hover:bg-card-bg-attention'">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Settings
+        </NuxtLink>
       </nav>
 
       <div v-if="store.deadLinksCount > 0" class="mx-3 mb-3 p-3 rounded-card bg-error-bg border border-error-border">
@@ -58,7 +68,15 @@
           's' : '' }}</p>
       </div>
 
-      <div class="p-3 border-t border-border-default">
+      <div class="p-3 border-t border-border-default space-y-2">
+        <button
+          type="button"
+          class="w-full px-3 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention flex items-center justify-center gap-2"
+          @click="toggleTheme"
+        >
+          <span>{{ theme === 'dark' ? '☀️' : '🌙' }}</span>
+          <span>{{ theme === 'dark' ? 'Light mode' : 'Dark mode' }}</span>
+        </button>
         <div class="flex items-center gap-2 mb-2">
           <img v-if="store.me?.user?.avatarUrl" :src="store.me.user.avatarUrl" :alt="store.me.user.name ?? ''"
             class="w-8 h-8 rounded-full" />
@@ -78,7 +96,7 @@
       </div>
     </aside>
 
-    <main class="flex-1 min-w-0">
+    <main class="flex-1 min-w-0 overflow-x-hidden">
       <slot />
     </main>
   </div>
@@ -86,11 +104,15 @@
 
 <script setup lang="ts">
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
+import { useTheme } from '~~/composables/useTheme'
 
 const store = useCreatorWorkspaceStore()
+const { theme, initTheme, toggleTheme } = useTheme()
 
 onMounted(async () => {
+  initTheme()
   if (!store.me) await store.fetchMe()
+  await store.loadCreatorSettings()
   const config = useRuntimeConfig()
   if (config.public.autoRunAuditOnLogin && store.me?.linkedChannels?.length && !store.hasVideos) {
     const cached = await store.loadFromCache()

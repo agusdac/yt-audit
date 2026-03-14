@@ -19,12 +19,13 @@ export default defineEventHandler(async (event) => {
 
   const cached = await getCachedAudit(userId, handles, ttlHours)
   if (!cached) {
-    return { cached: false, videos: [], linkResults: [] }
+    return { cached: false, videos: [], linkResults: [], cachedAt: null }
   }
 
   return {
     cached: true,
     videos: cached.videos,
-    linkResults: cached.linkResults
+    linkResults: cached.linkResults,
+    cachedAt: cached.cachedAt
   }
 })

@@ -26,6 +26,13 @@ const SOCIAL_REVENUE_MULTIPLIER = 0.8
 /** Other: 0.2x sponsor CPM */
 const OTHER_CPM_MULTIPLIER = 0.2
 
+export interface CreatorRevenueSettings {
+  cpmSponsor?: number
+  ctrAffiliate?: number
+  convAffiliate?: number
+  avgCommission?: number
+}
+
 /**
  * Estimate monthly views for a video.
  * - New videos (< 30 days): use totalViews (fresh content gets most views early)
@@ -46,35 +53,45 @@ export function estimateMonthlyViews(totalViews: number, publishedAt: string): n
  * Revenue loss per 1000 monthly views by link type.
  * Sponsor: CPM model. Affiliate: CTR × conversion × commission. Others: scaled.
  */
-function getRevenuePer1000Views(linkType: 'sponsor' | 'affiliate' | 'merch' | 'socialWithRevenue' | 'other'): number {
+function getRevenuePer1000Views(
+  linkType: 'sponsor' | 'affiliate' | 'merch' | 'socialWithRevenue' | 'other',
+  custom?: CreatorRevenueSettings
+): number {
+  const cpmSponsor = custom?.cpmSponsor ?? CPM_SPONSOR
+  const ctrAff = custom?.ctrAffiliate ?? CTR_AFFILIATE
+  const convAff = custom?.convAffiliate ?? CONV_AFFILIATE
+  const avgComm = custom?.avgCommission ?? AVG_COMMISSION
+  const affiliatePer1000 = 1000 * ctrAff * convAff * avgComm
+
   switch (linkType) {
     case 'sponsor':
-      return CPM_SPONSOR
+      return cpmSponsor
     case 'affiliate':
-      return AFFILIATE_PER_1000
+      return affiliatePer1000
     case 'merch':
-      return AFFILIATE_PER_1000 * MERCH_MULTIPLIER
+      return affiliatePer1000 * MERCH_MULTIPLIER
     case 'socialWithRevenue':
-      return AFFILIATE_PER_1000 * SOCIAL_REVENUE_MULTIPLIER
+      return affiliatePer1000 * SOCIAL_REVENUE_MULTIPLIER
     case 'other':
-      return CPM_SPONSOR * OTHER_CPM_MULTIPLIER
+      return cpmSponsor * OTHER_CPM_MULTIPLIER
     default:
-      return CPM_DEFAULT
+      return custom?.cpmSponsor ?? CPM_DEFAULT
   }
 }
 
 export function estimateRevenueLoss(
   monthlyViews: number,
-  linkType: 'sponsor' | 'affiliate' | 'merch' | 'socialWithRevenue' | 'other' = 'sponsor'
+  linkType: 'sponsor' | 'affiliate' | 'merch' | 'socialWithRevenue' | 'other' = 'sponsor',
+  custom?: CreatorRevenueSettings
 ): number {
-  const per1000 = getRevenuePer1000Views(linkType)
+  const per1000 = getRevenuePer1000Views(linkType, custom)
   return (monthlyViews / 1000) * per1000
 }
 
 export function getRevenueLossForLink(
   linkResult: LinkCheckResult,
   videos: VideoDetails[],
-  options?: { userSponsors?: string[] }
+  options?: { userSponsors?: string[]; creatorSettings?: CreatorRevenueSettings }
 ): { monthlyViews: number; revenueLoss: number } {
   const videoIds = linkResult.videoIds ?? []
   const linkType = getLinkType(linkResult.url, options?.userSponsors)
@@ -86,6 +103,6 @@ export function getRevenueLossForLink(
     }
   }
 
-  const revenueLoss = estimateRevenueLoss(monthlyViews, linkType)
+  const revenueLoss = estimateRevenueLoss(monthlyViews, linkType, options?.creatorSettings)
   return { monthlyViews, revenueLoss }
 }

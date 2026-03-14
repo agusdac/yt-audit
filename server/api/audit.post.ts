@@ -20,8 +20,9 @@ export default defineEventHandler(async (event) => {
   const rl = checkRateLimit(limitKey, Number(config.apiRateLimitPerMin) || 60)
   if (!rl.ok) {
     setResponseStatus(event, 429)
-    setHeader(event, 'Retry-After', rl.retryAfter ?? 60)
-    throw createError({ statusCode: 429, message: 'Rate limit exceeded' })
+    const retrySec = rl.retryAfter ?? 60
+    setHeader(event, 'Retry-After', retrySec)
+    throw createError({ statusCode: 429, message: `Rate limit exceeded. Retry after ${retrySec} seconds.` })
   }
   if (apiKey && config.apiKey && apiKey !== config.apiKey) {
     throw createError({ statusCode: 401, message: 'Invalid API key' })
@@ -80,9 +81,12 @@ export default defineEventHandler(async (event) => {
         highIntentComments = cached
       } else {
         const videosToFetch = videos.slice(0, maxVideos)
+        const hfOptions = config.detectIntentViaHf && config.hfToken
+          ? { useHF: true, hfToken: config.hfToken }
+          : undefined
         for (const video of videosToFetch) {
           try {
-            const comments = await fetchCommentsForVideo(video.id, video.title, config.ytApiKey)
+            const comments = await fetchCommentsForVideo(video.id, video.title, config.ytApiKey, 3, hfOptions)
             highIntentComments.push(...comments)
           } catch {
             // Skip videos that fail (e.g. comments disabled)
@@ -99,6 +103,13 @@ export default defineEventHandler(async (event) => {
     if (userId === ADMIN_USER_ID) {
       const { setCachedAudit } = await import('../service/auditCacheService')
       await setCachedAudit(ADMIN_USER_ID, handles, videos, linkResults)
+    }
+
+    try {
+      const { saveAuditHistoryWithLinks } = await import('../service/auditHistoryService')
+      await saveAuditHistoryWithLinks(handles, videos, linkResults)
+    } catch {
+      // ignore
     }
 
     return {

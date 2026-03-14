@@ -34,7 +34,8 @@ const PHRASES = (purchaseIntentKeywords.phrases as string[]).map((p) => p.toLowe
 const NEGATION_PATTERNS = [
   "don't", "dont", "won't", "wont", "not going to", "never", "no longer",
   "can't", "cant", "wouldn't", "wouldnt", "shouldn't", "shouldnt",
-  "not interested", "not gonna", "not buying", "not going to buy"
+  "not interested", "not gonna", "not buying", "not going to buy",
+  "no thanks", "not for me", "not right now", "maybe later", "pass", "skip"
 ]
 
 const NEGATION_WINDOW = 50
@@ -60,14 +61,49 @@ export function detectPurchaseIntent(text: string): boolean {
   return false
 }
 
+const HF_MODEL = 'j-hartmann/purchase-intention-english-roberta-large'
+const HF_DELAY_MS = 100
+
+async function detectPurchaseIntentViaHF(text: string, hfToken: string): Promise<boolean> {
+  if (!text || text.trim().length < 10) return false
+  try {
+    const res = await $fetch<Array<{ label: string; score: number }>>(
+      `https://api-inference.huggingface.co/models/${HF_MODEL}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${hfToken}` },
+        body: { inputs: text.trim().slice(0, 512) }
+      }
+    )
+    const item = Array.isArray(res) ? res[0] : res
+    if (item && typeof item === 'object' && 'label' in item) {
+      return String(item.label).toLowerCase() === 'yes' || (item.score && item.score > 0.5)
+    }
+  } catch {
+    // Fallback to keywords on API failure
+  }
+  return detectPurchaseIntent(text)
+}
+
 export async function fetchCommentsForVideo(
   videoId: string,
   videoTitle: string,
   ytApiKey: string,
-  maxPages = 3
+  maxPages = 3,
+  options?: { useHF?: boolean; hfToken?: string }
 ): Promise<YouTubeComment[]> {
   const results: YouTubeComment[] = []
   let pageToken: string | undefined
+  const useHF = options?.useHF && options?.hfToken
+
+  const checkIntent = async (text: string): Promise<boolean> => {
+    if (useHF) {
+      const result = await detectPurchaseIntentViaHF(text, options!.hfToken!)
+      await new Promise((r) => setTimeout(r, HF_DELAY_MS))
+      return result
+    }
+    return detectPurchaseIntent(text)
+  }
 
   for (let page = 0; page < maxPages; page++) {
     const url = 'https://www.googleapis.com/youtube/v3/commentThreads'
@@ -90,7 +126,8 @@ export async function fetchCommentsForVideo(
       if (!top) continue
 
       const text = top.textDisplay?.replace(/<[^>]+>/g, '') || ''
-      if (!detectPurchaseIntent(text)) continue
+      const hasIntent = useHF ? await checkIntent(text) : detectPurchaseIntent(text)
+      if (!hasIntent) continue
 
       const topLevel = item.snippet?.topLevelComment
       const commentId = topLevel?.id ?? item.id

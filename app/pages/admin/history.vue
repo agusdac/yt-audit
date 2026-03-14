@@ -9,6 +9,8 @@
           <li v-for="item in (history ?? [])" :key="item.id" class="flex flex-wrap items-center gap-x-4 gap-y-1 py-2 border-b border-border-default last:border-0">
             <span class="text-text-primary font-medium">@{{ item.handle }}</span>
             <span class="text-text-muted">{{ item.videoCount }} videos</span>
+            <span v-if="item.deadLinksCount != null && item.deadLinksCount > 0" class="text-error-text font-medium">{{ item.deadLinksCount }} dead</span>
+            <span v-if="item.revenueLoss != null && item.revenueLoss > 0" class="text-error-text text-xs">~${{ Math.round(item.revenueLoss) }}/mo</span>
             <span class="text-text-muted text-xs">{{ formatDateTime(item.createdAt) }}</span>
             <button
               type="button"
@@ -35,7 +37,7 @@ definePageMeta({
 })
 
 const adminStore = useAdminAuditStore()
-const { data: history } = await useFetch<Array<{ id: number; handle: string; videoCount: number; createdAt: string }>>('/api/admin/history')
+const { data: history } = await useFetch<Array<{ id: number; handle: string; videoCount: number; deadLinksCount?: number; revenueLoss?: number; createdAt: string }>>('/api/admin/history')
 
 const loadAndGo = async (handle: string) => {
   await adminStore.loadAuditFromHistory(handle)

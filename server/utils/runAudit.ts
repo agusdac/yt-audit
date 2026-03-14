@@ -64,14 +64,5 @@ export async function runAudit(
     return b.viewCount - a.viewCount
   })
 
-  const { saveAuditHistory } = await import('../service/auditHistoryService')
-  for (const h of uniqueHandles) {
-    try {
-      await saveAuditHistory(h, videos.filter(v => v.channelHandle === h).length)
-    } catch {
-      // ignore
-    }
-  }
-
   return { count: videos.length, videos }
 }

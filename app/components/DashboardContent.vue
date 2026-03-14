@@ -11,10 +11,18 @@
 
     <div class="flex items-center justify-between flex-wrap gap-4">
       <h1 class="text-2xl font-bold text-text-primary">Dashboard</h1>
-      <div class="flex items-center gap-3">
-        <span v-if="props.lastAuditAt" class="text-sm text-text-muted">
-          Last audit: {{ formatRelativeTime(props.lastAuditAt) }}
-        </span>
+      <div class="flex items-center gap-3 flex-wrap">
+        <div v-if="props.lastAuditAt" class="flex items-center gap-2">
+          <span class="text-sm text-text-muted">
+            Last audit: {{ formatRelativeTime(props.lastAuditAt) }}
+          </span>
+          <span
+            v-if="props.isCacheStale"
+            class="px-2 py-0.5 rounded text-xs font-medium bg-alert-bg border border-alert-border text-alert-text"
+          >
+            Data may be stale
+          </span>
+        </div>
         <button
           type="button"
           class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default hover:bg-card-bg-attention disabled:opacity-60 disabled:cursor-not-allowed"
@@ -64,6 +72,21 @@
         <div class="lg:col-span-2 space-y-4">
           <DeadLinkWatchdog :items="props.deadLinksWithRevenue" :max-visible="props.maxVisibleDeadLinks" :view-videos-href="props.viewVideosHref" />
 
+          <div v-if="(props.topVideosByRevenueLoss?.length ?? 0) > 0" class="rounded-card p-6 bg-card-bg border border-border-default">
+            <h3 class="font-bold text-text-primary mb-3">Top videos by revenue loss</h3>
+            <ul class="space-y-2">
+              <li v-for="v in props.topVideosByRevenueLoss!.slice(0, 5)" :key="v.videoId" class="flex items-center justify-between gap-2">
+                <NuxtLink
+                  :to="`${props.viewVideosHref}?videoId=${v.videoId}`"
+                  class="text-sm text-text-primary hover:text-hover-link truncate flex-1 min-w-0"
+                >
+                  {{ v.title }}
+                </NuxtLink>
+                <span class="text-sm font-medium text-error-text flex-shrink-0">~${{ Math.round(v.revenueLoss) }}/mo</span>
+              </li>
+            </ul>
+          </div>
+
           <div v-if="props.deadLinksCount === 0 && props.linkResults.length > 0"
             class="rounded-card p-6 bg-card-bg border border-border-default">
             <p class="text-merch-link font-medium">No dead links found. All checked links are OK or redirected.</p>
@@ -111,6 +134,7 @@ const props = withDefaults(
     highIntentComments: HighIntentComment[]
     totalRevenueLoss: number
     deadLinksWithRevenue: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string; firstVideoTitle?: string }>
+    topVideosByRevenueLoss?: Array<{ videoId: string; title: string; revenueLoss: number }>
     deadLinksCount: number
     videosAffectedByDeadLinks: number
     videosAffectedByComments: number
@@ -120,6 +144,7 @@ const props = withDefaults(
     commentsStatus: 'idle' | 'loading' | 'hasComments' | 'none'
     hasVideos: boolean
     lastAuditAt: Date | null
+    isCacheStale?: boolean
     error: string | null
     viewVideosHref: string
     viewCommentsHref: string

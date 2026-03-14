@@ -96,3 +96,18 @@ body {
     cursor: pointer;
   }
 }
+
+[data-theme="light"] {
+  --color-page-bg: #f4f4f5;
+  --color-card-bg: rgba(0, 0, 0, 0.03);
+  --color-card-bg-attention: rgba(245, 158, 11, 0.08);
+  --color-thumb-bg: #e4e4e7;
+  --color-border-default: rgba(0, 0, 0, 0.1);
+  --color-hover-border: rgba(0, 0, 0, 0.2);
+  --color-text-primary: #18181b;
+  --color-text-muted: #71717a;
+  --color-text-muted-strong: #52525b;
+  --color-filter-bg: rgba(0, 0, 0, 0.05);
+  --color-filter-bg-hover: rgba(0, 0, 0, 0.08);
+  --color-stat-bg: rgba(0, 0, 0, 0.03);
+}

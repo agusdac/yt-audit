@@ -83,8 +83,9 @@ export default defineEventHandler(async (event) => {
   const rl = checkRateLimit(limitKey, Number(config.apiRateLimitPerMin) || 60)
   if (!rl.ok) {
     setResponseStatus(event, 429)
-    setHeader(event, 'Retry-After', rl.retryAfter ?? 60)
-    throw createError({ statusCode: 429, message: 'Rate limit exceeded' })
+    const retrySec = rl.retryAfter ?? 60
+    setHeader(event, 'Retry-After', retrySec)
+    throw createError({ statusCode: 429, message: `Rate limit exceeded. Retry after ${retrySec} seconds.` })
   }
   if (apiKey && config.apiKey && apiKey !== config.apiKey) {
     throw createError({ statusCode: 401, message: 'Invalid API key' })

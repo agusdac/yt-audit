@@ -14,6 +14,12 @@
 
     <div class="rounded-card p-6 bg-card-bg border border-border-default mb-6">
       <h2 class="font-semibold text-text-primary mb-4">Channel handles</h2>
+      <div class="flex items-center gap-4 mb-4">
+        <label class="flex items-center gap-2">
+          <input v-model="highIntentOnly" type="checkbox" class="rounded" />
+          <span class="text-sm text-text-primary">High-intent only</span>
+        </label>
+      </div>
       <div class="flex flex-wrap gap-2 p-3 rounded-card bg-filter-bg border border-border-default mb-4">
         <span
           v-for="h in handles"
@@ -53,18 +59,52 @@
     </div>
 
     <div v-else-if="comments.length > 0" class="space-y-4">
+      <div class="rounded-card p-4 bg-filter-bg border border-border-default space-y-3">
+        <h3 class="font-medium text-text-primary">Filters</h3>
+        <div class="flex flex-wrap gap-3">
+          <input
+            v-model="filterKeyword"
+            type="text"
+            placeholder="Keyword"
+            class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary w-40"
+          />
+          <select
+            v-model="filterVideoId"
+            class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary"
+          >
+            <option value="">All videos</option>
+            <option v-for="v in uniqueVideos" :key="v.id" :value="v.id">{{ v.title }}</option>
+          </select>
+          <input
+            v-model="filterDateFrom"
+            type="date"
+            class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary"
+          />
+          <input
+            v-model="filterDateTo"
+            type="date"
+            class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary"
+          />
+        </div>
+      </div>
       <div class="flex items-center justify-between flex-wrap gap-4">
-        <p class="text-text-muted">{{ comments.length }} comments</p>
-        <button
-          type="button"
-          class="px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to hover:from-btn-hover-from hover:to-btn-hover-to"
-          @click="exportToCsv"
-        >
-          Export to CSV
-        </button>
+        <p class="text-text-muted">{{ displayedComments.length }} comments</p>
+        <div class="flex gap-2">
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="exportTextOnly" type="checkbox" class="rounded" />
+            Text only
+          </label>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to hover:from-btn-hover-from hover:to-btn-hover-to"
+            @click="exportToCsv"
+          >
+            Export to CSV
+          </button>
+        </div>
       </div>
       <div
-        v-for="c in comments"
+        v-for="c in displayedComments"
         :key="c.id"
         class="rounded-card p-4 bg-card-bg border border-border-default"
       >
@@ -82,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 interface YouTubeComment {
   id: string
@@ -105,6 +145,41 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const comments = ref<YouTubeComment[]>([])
 const isFetching = ref(false)
 const error = ref<string | null>(null)
+const highIntentOnly = ref(false)
+const filterKeyword = ref('')
+const filterVideoId = ref('')
+const filterDateFrom = ref('')
+const filterDateTo = ref('')
+const exportTextOnly = ref(true)
+
+const uniqueVideos = computed(() => {
+  const seen = new Set<string>()
+  return comments.value.filter((c) => {
+    if (seen.has(c.videoId)) return false
+    seen.add(c.videoId)
+    return true
+  }).map((c) => ({ id: c.videoId, title: c.videoTitle }))
+})
+
+const displayedComments = computed(() => {
+  let list = comments.value
+  if (filterKeyword.value.trim()) {
+    const k = filterKeyword.value.trim().toLowerCase()
+    list = list.filter((c) => c.text.toLowerCase().includes(k))
+  }
+  if (filterVideoId.value) {
+    list = list.filter((c) => c.videoId === filterVideoId.value)
+  }
+  if (filterDateFrom.value) {
+    const from = new Date(filterDateFrom.value).getTime()
+    list = list.filter((c) => new Date(c.publishedAt).getTime() >= from)
+  }
+  if (filterDateTo.value) {
+    const to = new Date(filterDateTo.value).getTime() + 86400000
+    list = list.filter((c) => new Date(c.publishedAt).getTime() < to)
+  }
+  return list
+})
 
 const normalizeHandle = (h: string) => h.trim().replace(/^@/, '')
 
@@ -132,7 +207,7 @@ const fetchComments = async () => {
   try {
     const res = await $fetch<{ comments: YouTubeComment[] }>('/api/admin/comments.fetch-raw', {
       method: 'POST',
-      body: { handles: handles.value }
+      body: { handles: handles.value, highIntentOnly: highIntentOnly.value }
     })
     comments.value = res.comments ?? []
   } catch (e: unknown) {
@@ -149,10 +224,20 @@ function escapeCsvValue(text: string): string {
 }
 
 const exportToCsv = () => {
-  if (comments.value.length === 0) return
+  if (displayedComments.value.length === 0) return
 
-  const header = 'text'
-  const rows = comments.value.map((c) => escapeCsvValue(c.text))
+  const list = displayedComments.value
+  let header: string
+  let rows: string[]
+  if (exportTextOnly.value) {
+    header = 'text'
+    rows = list.map((c) => escapeCsvValue(c.text))
+  } else {
+    header = 'text,author,video,permalink'
+    rows = list.map((c) =>
+      [escapeCsvValue(c.text), escapeCsvValue(c.authorDisplayName), escapeCsvValue(c.videoTitle), escapeCsvValue(c.permalink)].join(',')
+    )
+  }
   const csv = [header, ...rows].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
