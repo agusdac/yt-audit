@@ -13,3 +13,13 @@ export function formatDate(iso: string): string {
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString()
 }
+
+/** Relative time (e.g. "5 minutes ago") */
+export function formatRelativeTime(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minute${seconds >= 120 ? 's' : ''} ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hour${seconds >= 7200 ? 's' : ''} ago`
+  if (seconds < 2592000) return `${Math.floor(seconds / 86400)} day${seconds >= 172800 ? 's' : ''} ago`
+  return formatDateTime(date.toISOString())
+}

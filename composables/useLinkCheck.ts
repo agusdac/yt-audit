@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 import type { VideoDetails } from '~~/types/youtube'
 import { getLinksToCheck, normalizeUrl } from '~~/utils/url'
 import type { LinkCheckResult } from '~~/types/links'
@@ -10,9 +10,10 @@ export function useLinkCheck(
   options: {
     userSponsors: () => string[]
     checkOnlyMySponsors: () => boolean
+    linkResultsRef?: Ref<LinkCheckResult[]>
   }
 ) {
-  const linkResults = ref<LinkCheckResult[]>([])
+  const linkResults = options.linkResultsRef ?? ref<LinkCheckResult[]>([])
   const isCheckingLinks = ref(false)
   const linkCheckElapsed = ref(0)
   const linkCheckTotal = ref(0)

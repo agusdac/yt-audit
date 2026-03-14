@@ -22,7 +22,7 @@
             <span class="text-merch-link">●</span> See estimated revenue impact
           </li>
         </ul>
-        <a href="auth/google"
+        <a href="/auth/google"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-button font-semibold text-lg transition-all duration-200 bg-white text-gray-800 hover:bg-gray-100 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
           <svg class="w-6 h-6" viewBox="0 0 24 24">
             <path fill="#4285F4"

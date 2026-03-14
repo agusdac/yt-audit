@@ -12,6 +12,7 @@ export async function runAudit(
 ): Promise<{ count: number; videos: VideoDetails[] }> {
   const uniqueHandles = [...new Set(handles.map(normalizeHandle).filter(Boolean))]
   const allVideos: VideoDetails[] = []
+  const config = useRuntimeConfig()
 
   for (const handle of uniqueHandles) {
     const playlistId = await getUploadsPlaylistId(handle, ytApiKey)
@@ -22,7 +23,7 @@ export async function runAudit(
       const data = await getPlaylistVideos(playlistId, ytApiKey, nextPageToken)
       allVideoIds.push(...data.items.map(i => i.contentDetails.videoId))
       nextPageToken = data.nextPageToken
-      if (allVideoIds.length >= 140) break
+      if (allVideoIds.length >= config.maxVideosToFetch) break
     } while (nextPageToken)
 
     for (let i = 0; i < allVideoIds.length; i += 50) {

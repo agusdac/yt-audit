@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
             allVideoIds.push(...data.items.map(i => i.contentDetails.videoId))
             nextPageToken = data.nextPageToken
 
-            if (allVideoIds.length >= 140) break
+            if (allVideoIds.length >= config.maxVideosToFetch) break
         } while (nextPageToken)
 
         // Batch fetch details (Chunks of 50)

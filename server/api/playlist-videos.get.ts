@@ -3,7 +3,7 @@ import { getPlaylistVideos } from "../service/youtubeService"
 
 export default defineEventHandler(async (event) => {
     const { playlistId } = getQuery(event) as { playlistId: string }
-    // ludwig: UUrPseYLGpNygVi34QpGNqpA
+
     const config = useRuntimeConfig(event)
 
     let allVideos: VideoSummary[] = []
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
             nextPageToken = data.nextPageToken
 
             // Safety check: Stop if we hit a massive amount of videos to avoid timeouts
-            if (allVideos.length > 140) break
+            if (allVideos.length > config.maxVideosToFetch) break
 
         } while (nextPageToken)
 
