@@ -56,13 +56,23 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       this.error = null
       this.videos = []
       this.linkResults = []
+      this.highIntentComments = []
+      this.hasCommentsLoaded = false
 
       try {
-        const response = await $fetch<{ count: number; videos: VideoDetails[] }>('/api/audit', {
+        const response = await $fetch<{
+          count: number
+          videos: VideoDetails[]
+          linkResults?: LinkCheckResult[]
+          highIntentComments?: HighIntentComment[]
+        }>('/api/audit', {
           method: 'POST',
           body: { handles: channels.map((c) => c.handle) }
         })
         this.videos = response.videos
+        this.linkResults = response.linkResults ?? []
+        this.highIntentComments = response.highIntentComments ?? []
+        this.hasCommentsLoaded = true
         this.lastAuditAt = new Date()
       } catch (e: unknown) {
         const err = e as { data?: { message?: string }; message?: string }

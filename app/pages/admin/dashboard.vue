@@ -54,6 +54,8 @@
           :total-revenue-loss="totalRevenueLoss"
           :dead-links-with-revenue="deadLinksWithRevenue"
           :dead-links-count="store.deadLinksCount"
+          :videos-affected-by-dead-links="videosAffectedByDeadLinks"
+          :videos-affected-by-comments="videosAffectedByComments"
           :is-loading="store.isLoading"
           :is-checking-links="store.isCheckingLinks"
           :is-fetching-comments="store.isFetchingComments"
@@ -115,23 +117,37 @@ const runAudit = async () => {
   addChannel()
   if (store.channelHandles.length === 0) return
   await store.runAudit(store.channelHandles)
-  if (store.videos.length > 0) {
-    await store.runLinkCheck()
-    store.loadCommentsFromCache()
-  }
 }
 
 const deadLinksWithRevenue = computed(() => {
   const dead = store.linkResults.filter((r) => r.category === 'dead')
+  const videoMap = new Map(store.videos.map((v) => [v.id, v]))
   return dead.map((r) => {
     const { revenueLoss } = getRevenueLossForLink(r, store.videos, { userSponsors: [] })
+    const firstVideoId = (r.videoIds ?? [])[0]
+    const firstVideo = firstVideoId ? videoMap.get(firstVideoId) : undefined
     return {
       url: r.url,
       videoIds: r.videoIds ?? [],
       revenueLoss,
-      firstVideoId: (r.videoIds ?? [])[0]
+      firstVideoId,
+      firstVideoTitle: firstVideo?.title
     }
   })
+})
+
+const videosAffectedByDeadLinks = computed(() => {
+  const dead = store.linkResults.filter((r) => r.category === 'dead')
+  const ids = new Set<string>()
+  for (const r of dead) {
+    for (const id of r.videoIds ?? []) ids.add(id)
+  }
+  return ids.size
+})
+
+const videosAffectedByComments = computed(() => {
+  const ids = new Set(store.highIntentComments.map((c) => c.videoId))
+  return ids.size
 })
 
 const totalRevenueLoss = computed(() =>

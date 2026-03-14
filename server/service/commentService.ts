@@ -31,9 +31,33 @@ interface CommentThreadsResponse {
 
 const PHRASES = (purchaseIntentKeywords.phrases as string[]).map((p) => p.toLowerCase())
 
+const NEGATION_PATTERNS = [
+  "don't", "dont", "won't", "wont", "not going to", "never", "no longer",
+  "can't", "cant", "wouldn't", "wouldnt", "shouldn't", "shouldnt",
+  "not interested", "not gonna", "not buying", "not going to buy"
+]
+
+const NEGATION_WINDOW = 50
+
+function normalizeText(text: string): string {
+  return text.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
 export function detectPurchaseIntent(text: string): boolean {
-  const lower = text.toLowerCase()
-  return PHRASES.some((phrase) => lower.includes(phrase))
+  const normalized = normalizeText(text)
+  if (normalized.length < 10) return false
+
+  for (const phrase of PHRASES) {
+    const idx = normalized.indexOf(phrase)
+    if (idx === -1) continue
+
+    const beforePhrase = normalized.slice(Math.max(0, idx - NEGATION_WINDOW), idx)
+    const hasNegation = NEGATION_PATTERNS.some((neg) => beforePhrase.includes(neg))
+    if (hasNegation) continue
+
+    return true
+  }
+  return false
 }
 
 export async function fetchCommentsForVideo(

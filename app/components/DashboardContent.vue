@@ -38,15 +38,31 @@
     </div>
 
     <template v-else>
-      <RevenueScoreHero
-        :total-revenue-loss="props.totalRevenueLoss"
-        :dead-links-count="props.deadLinksCount"
-        :has-link-results="props.linkResults.length > 0"
-      />
+      <div class="flex flex-col sm:flex-row gap-4 flex-wrap">
+        <RevenueScoreHero
+          :total-revenue-loss="props.totalRevenueLoss"
+          :dead-links-count="props.deadLinksCount"
+          :has-link-results="props.linkResults.length > 0"
+        />
+        <div class="flex gap-3 flex-wrap items-center">
+          <div class="rounded-card px-3 py-2 bg-stat-bg border border-border-default">
+            <span class="text-xs text-text-muted">Videos checked</span>
+            <p class="text-lg font-bold text-text-primary">{{ props.videos.length }}</p>
+          </div>
+          <div class="rounded-card px-3 py-2 bg-stat-bg border border-border-default">
+            <span class="text-xs text-text-muted">Affected by dead links</span>
+            <p class="text-lg font-bold" :class="props.videosAffectedByDeadLinks > 0 ? 'text-error-text' : 'text-text-primary'">{{ props.videosAffectedByDeadLinks }}</p>
+          </div>
+          <div class="rounded-card px-3 py-2 bg-stat-bg border border-border-default">
+            <span class="text-xs text-text-muted">Affected by comments</span>
+            <p class="text-lg font-bold" :class="props.videosAffectedByComments > 0 ? 'text-alert-text' : 'text-text-primary'">{{ props.videosAffectedByComments }}</p>
+          </div>
+        </div>
+      </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-4">
-          <DeadLinkWatchdog :items="props.deadLinksWithRevenue" :max-visible="props.maxVisibleDeadLinks" />
+          <DeadLinkWatchdog :items="props.deadLinksWithRevenue" :max-visible="props.maxVisibleDeadLinks" :view-videos-href="props.viewVideosHref" />
 
           <div v-if="props.deadLinksCount === 0 && props.linkResults.length > 0"
             class="rounded-card p-6 bg-card-bg border border-border-default">
@@ -94,8 +110,10 @@ const props = withDefaults(
     linkResults: LinkCheckResult[]
     highIntentComments: HighIntentComment[]
     totalRevenueLoss: number
-    deadLinksWithRevenue: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string }>
+    deadLinksWithRevenue: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string; firstVideoTitle?: string }>
     deadLinksCount: number
+    videosAffectedByDeadLinks: number
+    videosAffectedByComments: number
     isLoading: boolean
     isCheckingLinks: boolean
     isFetchingComments: boolean

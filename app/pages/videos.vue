@@ -41,7 +41,11 @@
 
       <div v-else-if="store.videos.length > 0">
         <ErrorBoundary>
-          <VideoList :videos="store.videos" :sync-link-results-to-store="true" />
+          <VideoList
+            :videos="store.videos"
+            :sync-link-results-to-store="true"
+            :highlight-video-id="route.query.videoId as string | undefined"
+          />
         </ErrorBoundary>
       </div>
 
@@ -58,12 +62,13 @@
 </template>
 
 <script setup lang="ts">
-import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace';
+import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 
 definePageMeta({
   middleware: 'auth',
   layout: 'creator'
 })
 
+const route = useRoute()
 const store = useCreatorWorkspaceStore()
 </script>

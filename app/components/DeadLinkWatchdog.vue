@@ -7,7 +7,14 @@
         {{ item.videoIds.length }} video{{ item.videoIds.length > 1 ? 's' : '' }} affected
         · ~${{ Math.round(item.revenueLoss) }}/month estimated loss
       </p>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-2 items-center">
+        <NuxtLink
+          v-if="item.firstVideoId && props.viewVideosHref"
+          :to="`${props.viewVideosHref}?videoId=${item.firstVideoId}`"
+          class="text-xs text-text-muted hover:text-hover-link underline truncate max-w-[180px]"
+        >
+          {{ item.firstVideoTitle || 'View video' }}
+        </NuxtLink>
         <a
           v-if="item.firstVideoId"
           :href="studioUrl(item.firstVideoId)"
@@ -51,11 +58,13 @@ import { ref, computed } from 'vue'
 
 const props = withDefaults(
   defineProps<{
-    items: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string }>
+    items: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string; firstVideoTitle?: string }>
     maxVisible?: number
+    viewVideosHref?: string
   }>(),
-  { maxVisible: undefined }
+  { maxVisible: undefined, viewVideosHref: '/videos' }
 )
+
 
 const expanded = ref(false)
 

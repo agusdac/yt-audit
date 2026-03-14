@@ -38,13 +38,23 @@ export const useAdminAuditStore = defineStore('adminAudit', {
       this.error = null
       this.videos = []
       this.linkResults = []
+      this.highIntentComments = []
+      this.hasCommentsLoaded = false
 
       try {
-        const response = await $fetch<{ count: number; videos: VideoDetails[] }>('/api/audit', {
+        const response = await $fetch<{
+          count: number
+          videos: VideoDetails[]
+          linkResults?: LinkCheckResult[]
+          highIntentComments?: HighIntentComment[]
+        }>('/api/audit', {
           method: 'POST',
           body: { handles: normalized }
         })
         this.videos = response.videos
+        this.linkResults = response.linkResults ?? []
+        this.highIntentComments = response.highIntentComments ?? []
+        this.hasCommentsLoaded = true
         this.lastAuditAt = new Date()
       } catch (e: unknown) {
         const err = e as { data?: { message?: string }; message?: string }
@@ -88,6 +98,13 @@ export const useAdminAuditStore = defineStore('adminAudit', {
 
     clearError() {
       this.error = null
+    },
+
+    async loadAuditFromHistory(handle: string) {
+      const normalized = handle.trim().replace(/^@/, '')
+      if (!normalized) return
+      this.setChannelHandles([normalized])
+      await this.runAudit([normalized])
     },
 
     async loadCommentsFromCache() {

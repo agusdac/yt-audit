@@ -96,8 +96,8 @@ onMounted(async () => {
     const cached = await store.loadFromCache()
     if (!cached) {
       await store.runAudit()
-      if (store.videos.length > 0) await store.runLinkCheck()
     }
+    if (store.hasVideos) await store.loadCommentsFromCache()
   }
 })
 

@@ -221,15 +221,20 @@
     </div>
 
     <div class="space-y-4" role="list" aria-label="Videos">
-      <VideoCard
+      <div
         v-for="video in paginatedVideos"
         :key="video.id"
-        :video="video"
-        :has-monetization-links="hasMonetizationLinks(video.links)"
-        :is-user-sponsor-link="isUserSponsorLink"
-        :has-code-issue="hasCodeIssue"
-        :link-class="linkClass"
-      />
+        :ref="(el) => { if (video.id === props.highlightVideoId) highlightRef = el as HTMLElement }"
+        :class="video.id === props.highlightVideoId ? 'ring-2 ring-alert-border rounded-card -m-0.5 p-0.5' : ''"
+      >
+        <VideoCard
+          :video="video"
+          :has-monetization-links="hasMonetizationLinks(video.links)"
+          :is-user-sponsor-link="isUserSponsorLink"
+          :has-code-issue="hasCodeIssue"
+          :link-class="linkClass"
+        />
+      </div>
     </div>
 
     <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 py-4">
@@ -252,7 +257,7 @@
 
 <script setup lang="ts">
 import type { Ref } from 'vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 import type { VideoDetails, VideoType } from '~~/types/youtube'
@@ -267,6 +272,7 @@ const props = withDefaults(
     videos: VideoDetails[]
     syncLinkResultsToStore?: boolean
     linkResultsRef?: Ref<LinkCheckResult[]>
+    highlightVideoId?: string
   }>(),
   { syncLinkResultsToStore: false }
 )
@@ -283,6 +289,7 @@ const userSponsorsInput = ref('')
 const userSponsors = ref<string[]>([])
 const checkOnlyMySponsors = ref(false)
 const currentPage = ref(1)
+const highlightRef = ref<HTMLElement | null>(null)
 
 const parseUserSponsors = () => {
   userSponsors.value = userSponsorsInput.value
@@ -408,6 +415,29 @@ const filteredVideos = computed(() => {
 
 watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors], () => {
   currentPage.value = 1
+})
+
+watch(() => props.highlightVideoId, (id) => {
+  if (id) {
+    const idx = filteredVideos.value.findIndex((v) => v.id === id)
+    if (idx >= 0) currentPage.value = Math.floor(idx / PAGE_SIZE) + 1
+  }
+}, { immediate: true })
+
+watch([() => props.highlightVideoId, highlightRef, currentPage], async () => {
+  if (props.highlightVideoId && highlightRef.value) {
+    await nextTick()
+    highlightRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}, { flush: 'post' })
+
+onMounted(async () => {
+  if (props.highlightVideoId) {
+    const idx = filteredVideos.value.findIndex((v) => v.id === props.highlightVideoId)
+    if (idx >= 0) currentPage.value = Math.floor(idx / PAGE_SIZE) + 1
+    await nextTick()
+    highlightRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 })
 
 watch(() => linkResults.value.length, () => {

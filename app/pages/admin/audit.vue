@@ -47,7 +47,11 @@
 
       <div v-else-if="store.videos.length > 0" class="mb-6">
         <ErrorBoundary>
-          <VideoList :videos="store.videos" :link-results-ref="storeToRefs(store).linkResults" />
+          <VideoList
+          :videos="store.videos"
+          :link-results-ref="storeToRefs(store).linkResults"
+          :highlight-video-id="route.query.videoId as string | undefined"
+        />
         </ErrorBoundary>
       </div>
 
@@ -91,6 +95,7 @@ const runAudit = async () => {
   addChannel()
   if (store.channelHandles.length === 0) return
   await store.runAudit(store.channelHandles)
-  if (store.videos.length > 0) await store.runLinkCheck()
 }
+
+const route = useRoute()
 </script>
