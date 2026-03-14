@@ -3,6 +3,16 @@ import type { VideoDetails } from '~~/types/youtube'
 import type { LinkCheckResult } from '~~/types/links'
 import { getLinksToCheck } from '~~/utils/url'
 
+export interface HighIntentComment {
+  id: string
+  videoId: string
+  videoTitle: string
+  text: string
+  authorDisplayName: string
+  publishedAt: string
+  permalink: string
+}
+
 type MeData = {
   user: { id: string; email: string; name?: string; avatarUrl?: string }
   linkedChannels: Array<{ id: number; channelId: string; handle: string; channelTitle?: string }>
@@ -12,9 +22,12 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
   state: () => ({
     videos: [] as VideoDetails[],
     linkResults: [] as LinkCheckResult[],
+    highIntentComments: [] as HighIntentComment[],
+    hasCommentsLoaded: false,
     lastAuditAt: null as Date | null,
     isLoading: false,
     isCheckingLinks: false,
+    isFetchingComments: false,
     error: null as string | null,
     me: null as MeData | null
   }),
@@ -113,6 +126,38 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
 
     clearError() {
       this.error = null
+    },
+
+    async loadCommentsFromCache() {
+      try {
+        const res = await $fetch<{ highIntentComments: HighIntentComment[] }>('/api/comments')
+        this.highIntentComments = res.highIntentComments ?? []
+        this.hasCommentsLoaded = true
+      } catch {
+        this.highIntentComments = []
+      }
+    },
+
+    async fetchComments() {
+      if (this.videos.length === 0) return
+
+      this.isFetchingComments = true
+      this.error = null
+      try {
+        const res = await $fetch<{ highIntentComments: HighIntentComment[] }>('/api/comments.fetch', {
+          method: 'POST',
+          body: {
+            videos: this.videos.map((v) => ({ id: v.id, title: v.title }))
+          }
+        })
+        this.highIntentComments = res.highIntentComments ?? []
+        this.hasCommentsLoaded = true
+      } catch (e: unknown) {
+        const err = e as { data?: { message?: string }; message?: string }
+        this.error = err?.data?.message ?? err?.message ?? 'Failed to fetch comments.'
+      } finally {
+        this.isFetchingComments = false
+      }
     },
 
     async fetchMe() {

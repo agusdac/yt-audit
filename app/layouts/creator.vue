@@ -41,6 +41,15 @@
           </svg>
           All Videos
         </NuxtLink>
+        <NuxtLink to="/comments"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-button text-sm font-medium transition-colors"
+          :class="$route.path === '/comments' ? 'bg-filter-bg-active border border-filter-border-active text-filter-text-active' : 'text-text-muted hover:text-text-primary hover:bg-card-bg-attention'">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Comments
+        </NuxtLink>
       </nav>
 
       <div v-if="store.deadLinksCount > 0" class="mx-3 mb-3 p-3 rounded-card bg-error-bg border border-error-border">
@@ -80,8 +89,16 @@ import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 
 const store = useCreatorWorkspaceStore()
 
-onMounted(() => {
-  if (!store.me) store.fetchMe()
+onMounted(async () => {
+  if (!store.me) await store.fetchMe()
+  const config = useRuntimeConfig()
+  if (config.public.autoRunAuditOnLogin && store.me?.linkedChannels?.length && !store.hasVideos) {
+    const cached = await store.loadFromCache()
+    if (!cached) {
+      await store.runAudit()
+      if (store.videos.length > 0) await store.runLinkCheck()
+    }
+  }
 })
 
 const logout = async () => {

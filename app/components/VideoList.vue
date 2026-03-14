@@ -43,19 +43,6 @@
       </div>
     </div>
 
-    <div v-if="needsAttentionCount > 0"
-      class="rounded-card flex items-start gap-4 px-5 py-4 bg-alert-bg border-2 border-alert-border">
-      <span class="text-4xl">⚠️</span>
-      <div>
-        <p class="font-bold text-lg text-alert-text">
-          {{ needsAttentionCount }} video{{ needsAttentionCount > 1 ? 's' : '' }} have sponsor or affiliate links
-        </p>
-        <p class="text-sm mt-1 text-alert-text-muted">
-          Check these links—expired codes and dead URLs hurt your credibility and revenue.
-        </p>
-      </div>
-    </div>
-
     <div v-if="redirectedLinksCount > 0"
       class="rounded-card flex items-start gap-4 px-5 py-4 bg-alert-bg border-2 border-alert-border">
       <span class="text-4xl">↪️</span>
@@ -86,11 +73,6 @@
       <div class="rounded-card px-5 py-3 bg-stat-bg border border-border-default flex-shrink-0">
         <span class="text-sm block text-text-muted">Videos scanned</span>
         <p class="text-2xl font-bold text-text-primary">{{ props.videos.length }}</p>
-      </div>
-      <div v-if="needsAttentionCount > 0"
-        class="rounded-card px-5 py-3 bg-stat-attention-bg border border-stat-attention-border flex-shrink-0">
-        <span class="text-sm block text-stat-attention-label">Need your attention</span>
-        <p class="text-2xl font-bold text-stat-attention-text">{{ needsAttentionCount }}</p>
       </div>
       <div v-if="linkResults.length > 0" class="rounded-card px-5 py-3 bg-error-bg border border-error-border flex-shrink-0">
         <span class="text-sm block text-error-text/80">Dead</span>
@@ -440,10 +422,6 @@ const paginatedVideos = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE
   return filteredVideos.value.slice(start, start + PAGE_SIZE)
 })
-
-const needsAttentionCount = computed(() =>
-  props.videos.filter(v => hasMonetizationLinks(v.links)).length
-)
 
 const deadLinksWithRevenue = computed(() => {
   const dead = linkResults.value.filter(r => r.category === 'dead')

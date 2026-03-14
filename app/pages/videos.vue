@@ -66,8 +66,4 @@ definePageMeta({
 })
 
 const store = useCreatorWorkspaceStore()
-
-onMounted(async () => {
-  if (!store.me) await store.fetchMe()
-})
 </script>

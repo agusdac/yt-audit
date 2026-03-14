@@ -29,6 +29,13 @@
               >
                 History
               </NuxtLink>
+              <NuxtLink
+                to="/admin/comments"
+                class="px-3 py-1.5 rounded-button text-sm font-medium transition-colors"
+                :class="$route.path === '/admin/comments' ? 'bg-filter-bg-active border border-filter-border-active text-filter-text-active' : 'text-text-muted hover:text-text-primary hover:bg-filter-bg'"
+              >
+                Comments
+              </NuxtLink>
             </nav>
           </div>
           <div class="flex items-center gap-2">
