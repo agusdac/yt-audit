@@ -4,6 +4,9 @@ export function formatViews(n: number): string {
   return String(n)
 }
 
+/** Compact number format for likes/comments (e.g. 1.2K, 45K) */
+export const formatCompact = formatViews
+
 /** Short date for video published (e.g. "Jan 15, 2024") */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })

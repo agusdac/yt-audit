@@ -1,27 +1,153 @@
 <template>
   <div class="space-y-8">
-    <!-- Revenue loss summary -->
+    <!-- Filters (top, compact) -->
+    <div class="rounded-card p-4 bg-filter-bg border border-border-default sticky top-0 z-10 bg-page-bg/95 backdrop-blur flex flex-wrap items-center gap-2">
+      <label class="flex items-center gap-2">
+        <span class="text-sm font-medium text-text-muted">Search:</span>
+        <input v-model="searchQuery" type="text" placeholder="Filter by title..."
+          class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted w-40 sm:w-48" />
+      </label>
+      <span class="text-sm font-medium text-text-muted">Link type:</span>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterSponsor ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="filterSponsor = !filterSponsor">Sponsor</button>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterAffiliate ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="filterAffiliate = !filterAffiliate">Affiliate</button>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterMerch ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="filterMerch = !filterMerch">Merch</button>
+      <span class="text-sm font-medium text-text-muted">Sort:</span>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="sortBy === 'date' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="sortBy = 'date'">Date</button>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="sortBy === 'views' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="sortBy = 'views'">Views</button>
+      <button v-if="Object.keys(props.videoScores ?? {}).length > 0" type="button"
+        class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="sortBy === 'score' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="sortBy = 'score'">Score</button>
+      <button v-if="hasVideosWithRevenueLoss" type="button"
+        class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="sortBy === 'revenue' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="sortBy = 'revenue'">Revenue</button>
+      <button type="button"
+        class="filter-btn px-2 py-1.5 rounded-button text-sm font-medium transition-all border bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover"
+        :title="sortDirection === 'desc' ? 'Descending' : 'Ascending'"
+        @click="sortDirection = sortDirection === 'desc' ? 'asc' : 'desc'">
+        <span v-if="sortDirection === 'desc'">↓</span><span v-else>↑</span>
+      </button>
+      <span class="text-sm font-medium text-text-muted">Type:</span>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterType === 'short' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="filterType = filterType === 'short' ? null : 'short'">Short</button>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterType === 'live' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="filterType = filterType === 'live' ? null : 'live'">Live</button>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterType === 'video' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="filterType = filterType === 'video' ? null : 'video'">Video</button>
+      <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterPaidPlacement ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+        @click="filterPaidPlacement = !filterPaidPlacement">Paid</button>
+      <button v-if="hasFiltersActive" type="button"
+        class="px-3 py-1.5 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention hover:text-text-primary"
+        @click="clearFilters">
+        Clear filters
+      </button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="flex gap-4 overflow-x-auto pb-2 scroll-area" role="status" aria-live="polite" aria-atomic="true">
+      <div class="rounded-card px-5 py-3 bg-card-bg border border-border-default flex-shrink-0">
+        <span class="text-sm block text-text-muted">Videos scanned</span>
+        <p class="text-2xl font-bold text-text-primary">{{ props.videos.length }}</p>
+      </div>
+      <div v-if="linkResults.length > 0"
+        class="rounded-card px-5 py-3 bg-error-bg/30 border border-error-border flex-shrink-0">
+        <span class="text-sm block text-error-text/80">Dead</span>
+        <p class="text-2xl font-bold text-error-text">{{ deadLinksCount }}</p>
+      </div>
+      <div v-if="linkResults.length > 0"
+        class="rounded-card px-5 py-3 bg-alert-bg/30 border border-alert-border flex-shrink-0">
+        <span class="text-sm block text-alert-text-muted">Redirected</span>
+        <p class="text-2xl font-bold text-alert-text">{{ redirectedLinksCount }}</p>
+      </div>
+      <div v-if="linkResults.length > 0"
+        class="rounded-card px-5 py-3 bg-merch-bg/20 border border-merch-border flex-shrink-0">
+        <span class="text-sm block text-text-muted">OK</span>
+        <p class="text-2xl font-bold text-merch-link">{{ okLinksCount }}</p>
+      </div>
+      <div v-if="codeIssuesCount > 0"
+        class="rounded-card px-5 py-3 bg-alert-bg/30 border border-alert-border flex-shrink-0">
+        <span class="text-sm block text-alert-text-muted">Code issues</span>
+        <p class="text-2xl font-bold text-alert-text">{{ codeIssuesCount }}</p>
+      </div>
+    </div>
+
+    <!-- Actions (sponsors, link check, export) -->
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2">
+        <span class="text-sm text-text-muted">My sponsors:</span>
+        <input v-model="userSponsorsInput" type="text" placeholder="nordvpn.com, expressvpn.com"
+          class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted w-64"
+          @blur="parseUserSponsors" />
+      </label>
+      <button v-if="userSponsors.length > 0" type="button"
+        class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+        :class="filterMySponsors ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-filter-bg border-filter-border text-filter-text hover:bg-filter-bg-hover hover:border-filter-border-hover'"
+        @click="filterMySponsors = !filterMySponsors">
+        Only my sponsors
+      </button>
+      <label v-if="userSponsors.length > 0 && allLinksCount > 0" class="flex items-center gap-2 cursor-pointer">
+        <input v-model="checkOnlyMySponsors" type="checkbox" class="rounded" />
+        <span class="text-sm text-text-muted">Check only my sponsor links</span>
+      </label>
+      <template v-if="allLinksCount > 0">
+        <div v-if="isCheckingLinks" class="rounded-card p-4 bg-card-bg border border-border-default flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full border-2 border-border-default border-t-btn-from animate-spin flex-shrink-0" />
+          <div class="min-w-0">
+            <p class="font-medium text-text-primary">Checking links</p>
+            <p class="text-sm text-text-muted">{{ linkCheckProgress }}</p>
+          </div>
+          <div class="flex-1 h-1.5 rounded-full bg-border-default overflow-hidden min-w-24">
+            <div class="h-full bg-gradient-to-r from-btn-from to-btn-to transition-all duration-300"
+              :style="{ width: `${linkCheckProgressPercent}%` }" />
+          </div>
+        </div>
+        <div v-else class="flex flex-wrap items-center gap-2">
+          <button type="button"
+            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            @click="runLinkCheckWithParse">
+            Check {{ linksToCheckCount }} links
+          </button>
+          <button v-if="linkResults.length > 0" type="button"
+            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention transition-all"
+            @click="exportCsv">Export CSV</button>
+          <button v-if="linkResults.length > 0" type="button"
+            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention transition-all"
+            @click="exportJson">Export JSON</button>
+          <button type="button"
+            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention hover:border-border-attention transition-all"
+            @click="clearCache">Clear cache</button>
+        </div>
+        <div v-if="linkCheckError"
+          class="rounded-card px-4 py-3 flex items-center justify-between gap-3 bg-error-bg border border-error-border text-error-text">
+          <span>{{ linkCheckError }}</span>
+          <button type="button" class="px-3 py-1 rounded-button text-sm font-medium bg-error-bg hover:opacity-90"
+            @click="retryLinkCheckWithParse">Retry</button>
+        </div>
+      </template>
+    </div>
+
+    <!-- Revenue loss banner -->
     <div v-if="totalDeadLinkRevenueLoss > 0"
       class="rounded-card px-6 py-5 bg-error-bg/30 border border-error-border text-center">
       <p class="text-3xl md:text-4xl font-bold text-error-text">
         You're losing ~${{ Math.round(totalDeadLinkRevenueLoss) }}/month to dead links
       </p>
       <p class="text-sm mt-2 text-error-text/80">Fix the links below to stop the bleed.</p>
-    </div>
-
-    <!-- Export replacement list -->
-    <div v-if="(deadLinksWithRevenue.length > 0 || redirectedLinksWithRevenue.length > 0) && hasAnyReplacement"
-      class="rounded-card p-4 bg-filter-bg border border-border-default flex flex-wrap gap-2">
-      <button type="button"
-        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-        @click="copyAllReplacements">
-        {{ copiedAllReplacements ? 'Copied!' : 'Copy replacement list' }}
-      </button>
-      <button type="button"
-        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-        @click="exportReplacementCsv">
-        Export replacement list (CSV)
-      </button>
     </div>
 
     <!-- Dead links -->
@@ -81,190 +207,44 @@
       </div>
     </div>
 
-    <!-- Stat cards -->
-    <div class="flex gap-4 overflow-x-auto pb-2 scroll-area" role="status" aria-live="polite" aria-atomic="true">
-        <div class="rounded-card px-5 py-3 bg-card-bg border border-border-default flex-shrink-0">
-          <span class="text-sm block text-text-muted">Videos scanned</span>
-          <p class="text-2xl font-bold text-text-primary">{{ props.videos.length }}</p>
-        </div>
-        <div v-if="linkResults.length > 0"
-          class="rounded-card px-5 py-3 bg-error-bg/30 border border-error-border flex-shrink-0">
-          <span class="text-sm block text-error-text/80">Dead</span>
-          <p class="text-2xl font-bold text-error-text">{{ deadLinksCount }}</p>
-        </div>
-        <div v-if="linkResults.length > 0"
-          class="rounded-card px-5 py-3 bg-alert-bg/30 border border-alert-border flex-shrink-0">
-          <span class="text-sm block text-alert-text-muted">Redirected</span>
-          <p class="text-2xl font-bold text-alert-text">{{ redirectedLinksCount }}</p>
-        </div>
-        <div v-if="linkResults.length > 0"
-          class="rounded-card px-5 py-3 bg-merch-bg/20 border border-merch-border flex-shrink-0">
-          <span class="text-sm block text-text-muted">OK</span>
-          <p class="text-2xl font-bold text-merch-link">{{ okLinksCount }}</p>
-        </div>
-        <div v-if="codeIssuesCount > 0"
-          class="rounded-card px-5 py-3 bg-alert-bg/30 border border-alert-border flex-shrink-0">
-          <span class="text-sm block text-alert-text-muted">Code issues</span>
-          <p class="text-2xl font-bold text-alert-text">{{ codeIssuesCount }}</p>
-        </div>
+    <!-- Export replacement list -->
+    <div v-if="(deadLinksWithRevenue.length > 0 || redirectedLinksWithRevenue.length > 0) && hasAnyReplacement"
+      class="rounded-card p-4 bg-filter-bg border border-border-default flex flex-wrap gap-2">
+      <button type="button"
+        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+        @click="copyAllReplacements">
+        {{ copiedAllReplacements ? 'Copied!' : 'Copy replacement list' }}
+      </button>
+      <button type="button"
+        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+        @click="exportReplacementCsv">
+        Export replacement list (CSV)
+      </button>
     </div>
 
-    <!-- Filters -->
-    <div class="rounded-card p-4 bg-filter-bg border border-border-default space-y-3">
-        <div class="flex flex-wrap items-center gap-2">
-          <label class="flex items-center gap-2 w-full sm:w-auto">
-            <span class="text-sm font-medium text-text-muted">Search:</span>
-            <input v-model="searchQuery" type="text" placeholder="Filter by title..."
-              class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted w-full sm:w-48" />
-          </label>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium text-text-muted w-full sm:w-auto">Link type:</span>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="filterSponsor ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="filterSponsor = !filterSponsor">
-            Sponsor
-          </button>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="filterAffiliate ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="filterAffiliate = !filterAffiliate">
-            Affiliate
-          </button>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="filterMerch ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="filterMerch = !filterMerch">
-            Merch
-          </button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium text-text-muted w-full sm:w-auto">Sort by:</span>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="sortBy === 'date' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="sortBy = 'date'">
-            Date
-          </button>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="sortBy === 'views' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="sortBy = 'views'">
-            Views
-          </button>
-          <button
-            v-if="Object.keys(props.videoScores ?? {}).length > 0"
-            type="button"
-            class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="sortBy === 'score' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="sortBy = 'score'">
-            Score
-          </button>
-          <button
-            v-if="deadLinksWithRevenue.length > 0"
-            type="button"
-            class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="sortBy === 'revenue' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="sortBy = 'revenue'">
-            Revenue impact
-          </button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium text-text-muted w-full sm:w-auto">Video type:</span>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="filterType === 'short' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="filterType = filterType === 'short' ? null : 'short'">
-            Short
-          </button>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="filterType === 'live' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="filterType = filterType === 'live' ? null : 'live'">
-            Live
-          </button>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="filterType === 'video' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="filterType = filterType === 'video' ? null : 'video'">
-            Video
-          </button>
-          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-            :class="filterPaidPlacement ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
-            @click="filterPaidPlacement = !filterPaidPlacement">
-            Paid placement
-          </button>
-        </div>
-    </div>
-
-    <!-- My sponsors -->
-    <div class="flex flex-wrap items-center gap-3">
-        <label class="flex items-center gap-2">
-          <span class="text-sm text-text-muted">My sponsors:</span>
-          <input v-model="userSponsorsInput" type="text" placeholder="nordvpn.com, expressvpn.com"
-            class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted w-64"
-            @blur="parseUserSponsors" />
-        </label>
-        <button v-if="userSponsors.length > 0" type="button"
-          class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
-          :class="filterMySponsors ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-filter-bg border-filter-border text-filter-text hover:bg-filter-bg-hover hover:border-filter-border-hover'"
-          @click="filterMySponsors = !filterMySponsors">
-          Only my sponsors
-        </button>
-        <label v-if="userSponsors.length > 0 && allLinksCount > 0" class="flex items-center gap-2 cursor-pointer">
-          <input v-model="checkOnlyMySponsors" type="checkbox" class="rounded" />
-          <span class="text-sm text-text-muted">Check only my sponsor links</span>
-        </label>
-    </div>
-
-    <!-- Link check actions -->
-    <div v-if="allLinksCount > 0" class="flex flex-col gap-3">
-        <div v-if="isCheckingLinks" class="rounded-card p-4 bg-card-bg border border-border-default">
-          <div class="flex items-center gap-3">
-            <div
-              class="w-8 h-8 rounded-full border-2 border-border-default border-t-btn-from animate-spin flex-shrink-0" />
-            <div class="min-w-0">
-              <p class="font-medium text-text-primary">Checking links</p>
-              <p class="text-sm text-text-muted">{{ linkCheckProgress }}</p>
-            </div>
-          </div>
-          <div class="mt-3 h-1.5 rounded-full bg-border-default overflow-hidden">
-            <div class="h-full bg-gradient-to-r from-btn-from to-btn-to transition-all duration-300"
-              :style="{ width: `${linkCheckProgressPercent}%` }" />
-          </div>
-        </div>
-        <div v-else class="flex flex-wrap items-center gap-2">
-          <button type="button"
-            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            @click="runLinkCheckWithParse">
-            Check {{ linksToCheckCount }} links
-          </button>
-          <button v-if="linkResults.length > 0" type="button"
-            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention transition-all"
-            @click="exportCsv">
-            Export CSV
-          </button>
-          <button v-if="linkResults.length > 0" type="button"
-            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention transition-all"
-            @click="exportJson">
-            Export JSON
-          </button>
-          <button type="button"
-            class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention hover:border-border-attention transition-all"
-            @click="clearCache">
-            Clear cache
-          </button>
-        </div>
-        <div v-if="linkCheckError"
-          class="rounded-card px-4 py-3 flex items-center justify-between gap-3 bg-error-bg border border-error-border text-error-text">
-          <span>{{ linkCheckError }}</span>
-          <button type="button" class="px-3 py-1 rounded-button text-sm font-medium bg-error-bg hover:opacity-90"
-            @click="retryLinkCheckWithParse">
-            Retry
-          </button>
-        </div>
-    </div>
+    <!-- Results count -->
+    <p class="text-sm text-text-muted">
+      {{ resultsCountText }}
+    </p>
 
     <!-- Video list -->
-    <div class="space-y-4" role="list" aria-label="Videos">
+    <div v-if="filteredVideos.length === 0 && props.videos.length > 0"
+      class="rounded-card p-8 bg-filter-bg border border-border-default text-center">
+      <p class="text-text-muted">No videos match your filters. Clear filters to see all.</p>
+      <button type="button"
+        class="mt-3 px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+        @click="clearFilters">
+        Clear filters
+      </button>
+    </div>
+    <div v-else class="space-y-4" role="list" aria-label="Videos">
         <div v-for="video in paginatedVideos" :key="video.id"
           :ref="(el) => { if (video.id === props.highlightVideoId) highlightRef = el as HTMLElement }"
           :class="video.id === props.highlightVideoId ? 'ring-2 ring-border-default rounded-card -m-0.5 p-0.5' : ''">
           <VideoCard :video="video" :has-monetization-links="hasMonetizationLinks(video.links)"
             :video-score="props.videoScores?.[video.id]"
+            :revenue-loss="revenueLossByVideoId.get(video.id)"
+            :link-status="getLinkStatusForVideo(video.id)"
             :is-user-sponsor-link="isUserSponsorLink" :has-code-issue="hasCodeIssue" :link-class="linkClass" />
         </div>
     </div>
@@ -277,7 +257,7 @@
           Previous
         </button>
         <span class="text-sm text-text-muted">
-          Page {{ currentPage }} of {{ totalPages }}
+          {{ paginationRangeText }}
         </span>
         <button type="button"
           class="px-4 py-2 rounded-button font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention"
@@ -323,6 +303,7 @@ const filterPaidPlacement = ref(false)
 const filterMySponsors = ref(false)
 const userSponsorsInput = ref('')
 const sortBy = ref<'date' | 'views' | 'score' | 'revenue'>('date')
+const sortDirection = ref<'asc' | 'desc'>('desc')
 const userSponsors = ref<string[]>([])
 const checkOnlyMySponsors = ref(false)
 const currentPage = ref(1)
@@ -384,6 +365,14 @@ const hasMonetizationLinks = (links: CategorizedLinks): boolean => {
   return sponsors.length > 0 || affiliates.length > 0 || merch.length > 0 || socialWithRevenue.length > 0 || other.length > 0
 }
 
+const getLinkStatusForVideo = (videoId: string): { dead: number; redirected: number } | undefined => {
+  const results = linkResults.value.filter((r) => r.videoIds?.includes(videoId))
+  if (results.length === 0) return undefined
+  const dead = results.filter((r) => r.category === 'dead').length
+  const redirected = results.filter((r) => r.category === 'redirected').length
+  return { dead, redirected }
+}
+
 const matchesLinkFilter = (video: VideoDetails): boolean => {
   if (!filterSponsor.value && !filterAffiliate.value && !filterMerch.value) return true
   const { sponsors, affiliates, merch, socialWithRevenue, other } = video.links
@@ -431,20 +420,25 @@ const revenueLossByVideoId = computed(() => {
   return map
 })
 
+const hasVideosWithRevenueLoss = computed(() =>
+  [...revenueLossByVideoId.value.values()].some((v) => v > 0)
+)
+
 const getSortCompare = () => {
   const scores = props.videoScores ?? {}
+  const dir = sortDirection.value === 'asc' ? 1 : -1
   if (sortBy.value === 'date') {
     return (a: VideoDetails, b: VideoDetails) =>
-      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      dir * (new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime())
   }
   if (sortBy.value === 'views') {
-    return (a: VideoDetails, b: VideoDetails) => b.viewCount - a.viewCount
+    return (a: VideoDetails, b: VideoDetails) => dir * (a.viewCount - b.viewCount)
   }
   if (sortBy.value === 'score') {
     return (a: VideoDetails, b: VideoDetails) => {
       const aScore = scores[a.id] ?? -1
       const bScore = scores[b.id] ?? -1
-      return bScore - aScore
+      return dir * (aScore - bScore)
     }
   }
   if (sortBy.value === 'revenue') {
@@ -452,10 +446,10 @@ const getSortCompare = () => {
     return (a: VideoDetails, b: VideoDetails) => {
       const aRev = revMap.get(a.id) ?? -1
       const bRev = revMap.get(b.id) ?? -1
-      return bRev - aRev
+      return dir * (aRev - bRev)
     }
   }
-  return (a: VideoDetails, b: VideoDetails) => b.viewCount - a.viewCount
+  return (a: VideoDetails, b: VideoDetails) => dir * (a.viewCount - b.viewCount)
 }
 
 /** Base sort: monetization links first, then by selected sort */
@@ -502,7 +496,47 @@ const filteredVideos = computed(() => {
   })
 })
 
-watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors, sortBy, searchQuery], () => {
+const hasFiltersActive = computed(() => {
+  const q = searchQuery.value.trim()
+  return (
+    q.length > 0 ||
+    filterSponsor.value ||
+    filterAffiliate.value ||
+    filterMerch.value ||
+    filterType.value !== null ||
+    filterPaidPlacement.value ||
+    filterMySponsors.value
+  )
+})
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  filterSponsor.value = false
+  filterAffiliate.value = false
+  filterMerch.value = false
+  filterType.value = null
+  filterPaidPlacement.value = false
+  filterMySponsors.value = false
+  currentPage.value = 1
+}
+
+const resultsCountText = computed(() => {
+  const total = filteredVideos.value.length
+  const all = props.videos.length
+  if (hasFiltersActive.value && total !== all) {
+    return `Showing ${total} of ${all} videos`
+  }
+  return `${total} video${total !== 1 ? 's' : ''}`
+})
+
+const paginationRangeText = computed(() => {
+  const total = filteredVideos.value.length
+  const start = (currentPage.value - 1) * PAGE_SIZE + 1
+  const end = Math.min(currentPage.value * PAGE_SIZE, total)
+  return `Showing ${start}–${end} of ${total}`
+})
+
+watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors, sortBy, sortDirection, searchQuery], () => {
   currentPage.value = 1
 })
 

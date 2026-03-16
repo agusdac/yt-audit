@@ -36,12 +36,41 @@
           >
             Paid
           </span>
-          <span
+          <Tooltip
             v-if="videoScore != null"
-            class="inline-flex px-2 py-0.5 rounded text-xs font-medium border"
-            :class="scoreBadgeClass"
+            content="Metadata score—click for details"
+            placement="top"
+            trigger-class="inline-flex"
           >
-            {{ videoScore }}/100
+            <span
+              class="inline-flex px-2 py-0.5 rounded text-xs font-medium border cursor-default"
+              :class="scoreBadgeClass"
+            >
+              {{ videoScore }}/100
+            </span>
+          </Tooltip>
+          <span
+            v-if="linkStatus && (linkStatus.dead > 0 || linkStatus.redirected > 0)"
+            class="inline-flex gap-1 flex-wrap"
+          >
+            <span
+              v-if="linkStatus.dead > 0"
+              class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-error-bg/50 border border-error-border text-error-text"
+            >
+              {{ linkStatus.dead }} dead
+            </span>
+            <span
+              v-if="linkStatus.redirected > 0"
+              class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-alert-bg/50 border border-alert-border text-alert-text"
+            >
+              {{ linkStatus.redirected }} redirected
+            </span>
+          </span>
+          <span
+            v-else-if="linkStatus"
+            class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-merch-bg/30 border border-merch-border text-merch-text"
+          >
+            OK
           </span>
         </div>
         <div class="flex items-start justify-between gap-2">
@@ -51,19 +80,37 @@
           >
             {{ video.title }}
           </NuxtLink>
-          <a
-            :href="`https://studio.youtube.com/video/${video.id}/edit`"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex-shrink-0 px-2 py-1 rounded-button text-xs font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention hover:border-border-attention hover:text-text-primary transition-all"
-          >
-            Edit in Studio
-          </a>
+          <div class="flex flex-shrink-0 gap-1">
+            <a
+              :href="`https://www.youtube.com/watch?v=${video.id}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-2 py-1 rounded-button text-xs font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention hover:border-border-attention hover:text-text-primary transition-all"
+            >
+              View in YouTube
+            </a>
+            <a
+              :href="`https://studio.youtube.com/video/${video.id}/edit`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-2 py-1 rounded-button text-xs font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention hover:border-border-attention hover:text-text-primary transition-all"
+            >
+              Edit in Studio
+            </a>
+          </div>
         </div>
         <div class="flex flex-wrap gap-3 mt-2 text-sm text-text-muted">
           <span>{{ formatViews(video.viewCount) }} views</span>
+          <span v-if="video.likeCount != null">{{ formatViews(video.likeCount) }} likes</span>
+          <span v-if="video.commentCount != null">{{ formatViews(video.commentCount) }} comments</span>
           <span>{{ formatDate(video.publishedAt) }}</span>
           <span>{{ formatDuration(video.duration) }}</span>
+          <span
+            v-if="revenueLoss != null && revenueLoss > 0"
+            class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-error-bg/50 border border-error-border text-error-text"
+          >
+            ~${{ Math.round(revenueLoss) }}/mo loss
+          </span>
         </div>
         <div class="mt-3 space-y-2">
           <LinkCategory
@@ -125,11 +172,14 @@ import type { VideoDetails } from '~~/types/youtube'
 import type { CategorizedLinks } from '~~/utils/url'
 import { formatViews, formatDate, formatDuration } from '~~/utils/format'
 import LinkCategory from './LinkCategory.vue'
+import Tooltip from './Tooltip.vue'
 
 const props = defineProps<{
   video: VideoDetails
   hasMonetizationLinks: boolean
   videoScore?: number
+  revenueLoss?: number
+  linkStatus?: { dead: number; redirected: number }
   isUserSponsorLink: (url: string) => boolean
   hasCodeIssue: (url: string) => boolean
   linkClass: (url: string, defaultClass: string) => string
