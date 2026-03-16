@@ -101,8 +101,9 @@
           </div>
 
           <div v-if="props.deadLinksCount === 0 && props.linkResults.length > 0"
-            class="rounded-card p-6 bg-card-bg border border-border-default">
-            <p class="text-merch-link font-medium">No dead links found. All checked links are OK or redirected.</p>
+            class="rounded-card p-6 bg-merch-bg/20 border-2 border-merch-border">
+            <p class="text-xl font-bold text-merch-text mb-1">All links OK</p>
+            <p class="text-merch-text/90">No dead or redirected links found. Your descriptions are in good shape.</p>
           </div>
 
           <div v-if="props.hasVideos && props.linkResults.length === 0"

@@ -82,8 +82,9 @@ export interface ChannelDetails {
   description: string
   customUrl?: string
   thumbnails?: { default?: { url: string } }
+  keywords?: string
   brandingSettings?: {
-    channel?: { unsubscribedTrailer?: string }
+    channel?: { unsubscribedTrailer?: string; keywords?: string }
     watch?: { featuredPlaylistId?: string }
     image?: { bannerExternalUrl?: string }
   }
@@ -103,7 +104,7 @@ export const getChannelDetails = async (
         thumbnails?: { default?: { url: string }; medium?: { url: string }; high?: { url: string } }
       }
       brandingSettings?: {
-        channel?: { unsubscribedTrailer?: string }
+        channel?: { unsubscribedTrailer?: string; keywords?: string }
         watch?: { featuredPlaylistId?: string }
         image?: { bannerExternalUrl?: string }
       }
@@ -126,6 +127,7 @@ export const getChannelDetails = async (
     description: ch.snippet.description ?? '',
     customUrl: ch.snippet.customUrl,
     thumbnails: ch.snippet.thumbnails ? { default: ch.snippet.thumbnails.default } : undefined,
+    keywords: ch.brandingSettings?.channel?.keywords,
     brandingSettings: ch.brandingSettings
   }
 }

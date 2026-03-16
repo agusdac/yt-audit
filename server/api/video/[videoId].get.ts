@@ -81,7 +81,8 @@ export default defineEventHandler(async (event): Promise<{
         channelHandle: linkedChannel.handle,
         thumbnails: raw.snippet.thumbnails ? { maxres: raw.snippet.thumbnails.maxres } : undefined,
         definition: raw.contentDetails.definition,
-        channelId: raw.snippet.channelId
+        channelId: raw.snippet.channelId,
+        tags: (raw.snippet as { tags?: string[] }).tags
       }
       return { video, linkResults, score: cached }
     }
@@ -104,7 +105,8 @@ export default defineEventHandler(async (event): Promise<{
     channelHandle: linkedChannel.handle,
     thumbnails: raw.snippet.thumbnails ? { maxres: raw.snippet.thumbnails.maxres } : undefined,
     definition: raw.contentDetails.definition,
-    channelId: raw.snippet.channelId
+    channelId: raw.snippet.channelId,
+    tags: (raw.snippet as { tags?: string[] }).tags
   }
 
   score = calculateVideoScore(
@@ -116,7 +118,8 @@ export default defineEventHandler(async (event): Promise<{
       definition: video.definition,
       links: video.links,
       linkResults,
-      channelVideoIds
+      channelVideoIds,
+      tags: (raw.snippet as { tags?: string[] }).tags
     },
     videoId
   )

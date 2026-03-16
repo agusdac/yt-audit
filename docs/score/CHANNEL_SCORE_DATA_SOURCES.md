@@ -4,7 +4,7 @@ This document maps each metric in the channel score to its data source, calculat
 
 ## Formula
 
-- **Channel Setup Score** = sum of 7 metrics (max 100, scaled from 70 computable points)
+- **Channel Setup Score** = sum of 8 metrics (max 100, scaled from 75 computable points)
 - **Recent Content Score** = average of last 10 video scores (max 100)
 - **Global Channel Score** = (Channel Setup / 2) + (Recent Content / 2) - Channel Penalties
 
@@ -18,6 +18,7 @@ This document maps each metric in the channel score to its data source, calculat
 | Channel handle        | 10     | `snippet.customUrl`                                                | Handles are essential for tagging, Shorts discovery, and brand identity.       | None                                             |
 | Video watermark       | 10     | **Deferred**                                                       | Subscribe button on every video drives passive subscriptions.                  | Requires watermarks API + OAuth                   |
 | Visual branding       | 10     | `snippet.thumbnails.default`, `brandingSettings.image.bannerExternalUrl` | Missing banner or avatar signals abandoned or amateur channel to viewers and sponsors. | Both avatar and banner required                   |
+| Channel keywords      | 5      | `brandingSettings.channel.keywords`                                     | Keywords help YouTube surface your channel in search and recommendations.              | None                                             |
 | Business & social links | 10   | `snippet.description` (regex for email, `extractUrls` for external) | Missing contact means missing brand deals; missing social links traps audience on YouTube. | YouTube Data API v3 does not expose the "More Info" panel links; we use description only. Email regex may miss edge cases. |
 
 ## Penalties
@@ -36,7 +37,7 @@ YouTube API (channels.list) part=snippet,brandingSettings,contentDetails,statist
   ├── snippet.description → description SEO, business links, missing contact
   ├── snippet.customUrl → channel handle
   ├── snippet.thumbnails.default → visual branding
-  └── brandingSettings → trailer/featured, banner image
+  └── brandingSettings → trailer/featured, banner image, channel keywords
 
 Link check service (on channel description URLs) → linkResults
   └── category 'dead' → dead link penalty
@@ -57,4 +58,4 @@ contentDetails + playlist → latest video publishedAt
 
 ## Scaling
 
-Deferred metrics (homepage layout, video watermark) do not block reaching 100. Raw setup score is scaled by `(100/70)` so that the 70 computable points map to 100.
+Deferred metrics (homepage layout, video watermark) do not block reaching 100. Raw setup score is scaled by `(100/75)` so that the 75 computable points map to 100.

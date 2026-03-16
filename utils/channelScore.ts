@@ -10,8 +10,9 @@ export interface ChannelScoreInput {
   description: string
   customUrl?: string
   thumbnails?: { default?: { url: string } }
+  keywords?: string
   brandingSettings?: {
-    channel?: { unsubscribedTrailer?: string }
+    channel?: { unsubscribedTrailer?: string; keywords?: string }
     watch?: { featuredPlaylistId?: string }
     image?: { bannerExternalUrl?: string }
   }
@@ -98,6 +99,17 @@ const checkVisualBranding = (
 }
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i
+
+const checkChannelKeywords = (keywords?: string): { passed: boolean; explanation: string } => {
+  const trimmed = keywords?.trim() ?? ''
+  const passed = trimmed.length > 0
+  return {
+    passed,
+    explanation: passed
+      ? 'Channel keywords are set—helps discovery in search and recommendations.'
+      : 'Add channel keywords in YouTube Studio for better discoverability.'
+  }
+}
 
 const checkBusinessLinks = (description: string): { passed: boolean; explanation: string } => {
   const urls = extractUrls(description)
@@ -218,6 +230,17 @@ export const calculateChannelScore = (input: ChannelScoreInput): ChannelScoreRes
     passed: false,
     explanation: 'Requires watermarks API. Coming soon.',
     whyImportant: 'Subscribe button on every video drives passive subscriptions.'
+  })
+
+  const keywords = checkChannelKeywords(input.keywords ?? input.brandingSettings?.channel?.keywords)
+  steps.push({
+    id: 'channel-keywords',
+    name: 'Channel keywords',
+    points: keywords.passed ? 5 : 0,
+    maxPoints: 5,
+    passed: keywords.passed,
+    explanation: keywords.explanation,
+    whyImportant: 'Keywords help YouTube surface your channel in search and recommendations.'
   })
 
   const visual = checkVisualBranding(input.thumbnails, input.brandingSettings?.image?.bannerExternalUrl)

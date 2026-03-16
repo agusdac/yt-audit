@@ -42,6 +42,7 @@ export interface VideoDetails {
     thumbnails?: { maxres?: { url: string } }
     definition?: 'hd' | 'sd'
     channelId?: string
+    tags?: string[]
 }
 
 export interface YouTubeVideoDetailSingleResponse {
@@ -52,6 +53,7 @@ export interface YouTubeVideoDetailSingleResponse {
         publishedAt: string
         liveBroadcastContent: string
         channelId?: string
+        tags?: string[]
         thumbnails?: {
             default?: { url: string }
             medium?: { url: string }

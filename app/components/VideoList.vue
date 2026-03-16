@@ -11,7 +11,12 @@
 
     <!-- Export replacement list -->
     <div v-if="(deadLinksWithRevenue.length > 0 || redirectedLinksWithRevenue.length > 0) && hasAnyReplacement"
-      class="rounded-card p-4 bg-filter-bg border border-border-default">
+      class="rounded-card p-4 bg-filter-bg border border-border-default flex flex-wrap gap-2">
+      <button type="button"
+        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+        @click="copyAllReplacements">
+        {{ copiedAllReplacements ? 'Copied!' : 'Copy replacement list' }}
+      </button>
       <button type="button"
         class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
         @click="exportReplacementCsv">
@@ -107,6 +112,13 @@
     <!-- Filters -->
     <div class="rounded-card p-4 bg-filter-bg border border-border-default space-y-3">
         <div class="flex flex-wrap items-center gap-2">
+          <label class="flex items-center gap-2 w-full sm:w-auto">
+            <span class="text-sm font-medium text-text-muted">Search:</span>
+            <input v-model="searchQuery" type="text" placeholder="Filter by title..."
+              class="px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted w-full sm:w-48" />
+          </label>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
           <span class="text-sm font-medium text-text-muted w-full sm:w-auto">Link type:</span>
           <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
             :class="filterSponsor ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
@@ -143,6 +155,14 @@
             :class="sortBy === 'score' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
             @click="sortBy = 'score'">
             Score
+          </button>
+          <button
+            v-if="deadLinksWithRevenue.length > 0"
+            type="button"
+            class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+            :class="sortBy === 'revenue' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+            @click="sortBy = 'revenue'">
+            Revenue impact
           </button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -244,6 +264,7 @@
           :ref="(el) => { if (video.id === props.highlightVideoId) highlightRef = el as HTMLElement }"
           :class="video.id === props.highlightVideoId ? 'ring-2 ring-border-default rounded-card -m-0.5 p-0.5' : ''">
           <VideoCard :video="video" :has-monetization-links="hasMonetizationLinks(video.links)"
+            :video-score="props.videoScores?.[video.id]"
             :is-user-sponsor-link="isUserSponsorLink" :has-code-issue="hasCodeIssue" :link-class="linkClass" />
         </div>
     </div>
@@ -277,7 +298,7 @@ import type { CategorizedLinks } from '~~/utils/url'
 import type { LinkCheckResult } from '~~/types/links'
 import { getLinksToCheck } from '~~/utils/url'
 import { useLinkCheck } from '~~/composables/useLinkCheck'
-import { getRevenueLossForLink } from '~~/utils/revenue'
+import { getRevenueLossForLink, estimateMonthlyViews } from '~~/utils/revenue'
 
 const props = withDefaults(
   defineProps<{
@@ -293,6 +314,7 @@ const props = withDefaults(
 const PAGE_SIZE = 10
 
 const codeIssuesOpen = ref(false)
+const searchQuery = ref('')
 const filterSponsor = ref(false)
 const filterAffiliate = ref(false)
 const filterMerch = ref(false)
@@ -300,12 +322,13 @@ const filterType = ref<VideoType | null>(null)
 const filterPaidPlacement = ref(false)
 const filterMySponsors = ref(false)
 const userSponsorsInput = ref('')
-const sortBy = ref<'date' | 'views' | 'score'>('date')
+const sortBy = ref<'date' | 'views' | 'score' | 'revenue'>('date')
 const userSponsors = ref<string[]>([])
 const checkOnlyMySponsors = ref(false)
 const currentPage = ref(1)
 const highlightRef = ref<HTMLElement | null>(null)
 const replacementUrls = ref<Record<string, string>>({})
+const copiedAllReplacements = ref(false)
 
 const parseUserSponsors = () => {
   userSponsors.value = userSponsorsInput.value
@@ -385,6 +408,29 @@ const matchesMySponsorsFilter = (video: VideoDetails): boolean => {
   return videoHasUserSponsorLinks(video)
 }
 
+const matchesSearchFilter = (video: VideoDetails): boolean => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return true
+  return video.title.toLowerCase().includes(q)
+}
+
+const revenueLossByVideoId = computed(() => {
+  const map = new Map<string, number>()
+  const deadWithRev = deadLinksWithRevenue.value
+  for (const item of deadWithRev) {
+    const videos = item.videoIds
+      .map((id) => props.videos.find((v) => v.id === id))
+      .filter((v): v is VideoDetails => !!v)
+    const totalViews = videos.reduce((s, v) => s + estimateMonthlyViews(v.viewCount, v.publishedAt), 0)
+    if (totalViews <= 0) continue
+    for (const v of videos) {
+      const share = estimateMonthlyViews(v.viewCount, v.publishedAt) / totalViews
+      map.set(v.id, (map.get(v.id) ?? 0) + item.revenueLoss * share)
+    }
+  }
+  return map
+})
+
 const getSortCompare = () => {
   const scores = props.videoScores ?? {}
   if (sortBy.value === 'date') {
@@ -401,6 +447,14 @@ const getSortCompare = () => {
       return bScore - aScore
     }
   }
+  if (sortBy.value === 'revenue') {
+    const revMap = revenueLossByVideoId.value
+    return (a: VideoDetails, b: VideoDetails) => {
+      const aRev = revMap.get(a.id) ?? -1
+      const bRev = revMap.get(b.id) ?? -1
+      return bRev - aRev
+    }
+  }
   return (a: VideoDetails, b: VideoDetails) => b.viewCount - a.viewCount
 }
 
@@ -414,7 +468,7 @@ const baseSort = (a: VideoDetails, b: VideoDetails) => {
 
 const filteredVideos = computed(() => {
   const filtered = props.videos.filter(v =>
-    matchesLinkFilter(v) && matchesTypeFilter(v) && matchesPaidPlacementFilter(v) && matchesMySponsorsFilter(v)
+    matchesLinkFilter(v) && matchesTypeFilter(v) && matchesPaidPlacementFilter(v) && matchesMySponsorsFilter(v) && matchesSearchFilter(v)
   )
 
   if (linkResults.value.length === 0) {
@@ -448,7 +502,7 @@ const filteredVideos = computed(() => {
   })
 })
 
-watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors, sortBy], () => {
+watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors, sortBy, searchQuery], () => {
   currentPage.value = 1
 })
 
@@ -540,6 +594,21 @@ const hasAnyReplacement = computed(() => {
 })
 
 const escapeCsv = (s: string) => `"${String(s).replace(/"/g, '""')}"`
+
+const copyAllReplacements = async () => {
+  const allItems = [...deadLinksWithRevenue.value, ...redirectedLinksWithRevenue.value]
+  const lines = allItems
+    .map((item) => {
+      const newUrl = replacementUrls.value[item.url]?.trim()
+      if (!newUrl || !item.videoIds?.length) return null
+      return `${item.url} → ${newUrl}`
+    })
+    .filter((l): l is string => l != null)
+  if (lines.length === 0) return
+  await navigator.clipboard.writeText(lines.join('\n'))
+  copiedAllReplacements.value = true
+  setTimeout(() => { copiedAllReplacements.value = false }, 2000)
+}
 
 const copyReplacementList = async (item: { url: string; videoIds: string[] }) => {
   const newUrl = replacementUrls.value[item.url]?.trim()

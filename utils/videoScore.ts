@@ -16,6 +16,7 @@ export interface VideoScoreInput {
   links: CategorizedLinks
   linkResults: LinkCheckResult[]
   channelVideoIds: string[]
+  tags?: string[]
 }
 
 export interface ScoreStep {
@@ -202,6 +203,17 @@ const checkHdQuality = (definition?: 'hd' | 'sd'): { passed: boolean; explanatio
   }
 }
 
+const checkVideoTags = (tags?: string[]): { passed: boolean; explanation: string } => {
+  const count = tags?.filter(Boolean).length ?? 0
+  const passed = count >= 2
+  return {
+    passed,
+    explanation: passed
+      ? `Video has ${count} tags—helps YouTube understand and recommend your content.`
+      : 'Add at least 2 tags to help YouTube categorize and recommend your video.'
+  }
+}
+
 const checkClickAwayPenalty = (description: string, links: CategorizedLinks): { applied: boolean; explanation: string } => {
   const aboveFold = description.slice(0, 150)
   const allUrls = getLinksToCheck(links)
@@ -353,6 +365,17 @@ export const calculateVideoScore = (
     whyImportant: 'SD signals low production value; algorithm may restrict reach.'
   })
 
+  const tags = checkVideoTags(input.tags)
+  steps.push({
+    id: 'video-tags',
+    name: 'Video tags',
+    points: tags.passed ? 5 : 0,
+    maxPoints: 5,
+    passed: tags.passed,
+    explanation: tags.explanation,
+    whyImportant: 'Tags help YouTube understand and recommend your video to the right audience.'
+  })
+
   const clickAway = checkClickAwayPenalty(input.description, input.links)
   penalties.push({
     id: 'click-away',
@@ -383,7 +406,7 @@ export const calculateVideoScore = (
   const maxPossible = 100
   const earned = steps.reduce((s, st) => s + st.points, 0)
   const penaltyTotal = penalties.filter(p => p.applied).reduce((s, p) => s + p.points, 0)
-  const maxFromComputable = 80
+  const maxFromComputable = 85
   const rawScore = earned + penaltyTotal
   const score = Math.max(0, Math.min(100, Math.round(rawScore * (100 / maxFromComputable))))
 

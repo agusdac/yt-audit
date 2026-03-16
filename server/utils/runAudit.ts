@@ -55,7 +55,8 @@ export async function runAudit(
             type: getVideoType(v),
             publishedAt: v.snippet.publishedAt,
             hasPaidProductPlacement: v.paidProductPlacementDetails?.hasPaidProductPlacement ?? false,
-            channelHandle: handle
+            channelHandle: handle,
+            tags: v.snippet.tags
           })
         }
       }

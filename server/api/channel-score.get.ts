@@ -105,7 +105,8 @@ export default defineEventHandler(async (event): Promise<{
             definition: raw.contentDetails.definition,
             links,
             linkResults: videoLinkResults,
-            channelVideoIds: allChannelVideoIds
+            channelVideoIds: allChannelVideoIds,
+            tags: (raw.snippet as { tags?: string[] }).tags
           },
           raw.id
         )
@@ -121,6 +122,7 @@ export default defineEventHandler(async (event): Promise<{
     description: details.description,
     customUrl: details.customUrl,
     thumbnails: details.thumbnails,
+    keywords: details.keywords,
     brandingSettings: details.brandingSettings,
     linkResults: channelLinkChecks,
     lastVideoPublishedAt,

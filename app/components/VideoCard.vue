@@ -36,6 +36,13 @@
           >
             Paid
           </span>
+          <span
+            v-if="videoScore != null"
+            class="inline-flex px-2 py-0.5 rounded text-xs font-medium border"
+            :class="scoreBadgeClass"
+          >
+            {{ videoScore }}/100
+          </span>
         </div>
         <div class="flex items-start justify-between gap-2">
           <NuxtLink
@@ -56,6 +63,7 @@
         <div class="flex flex-wrap gap-3 mt-2 text-sm text-text-muted">
           <span>{{ formatViews(video.viewCount) }} views</span>
           <span>{{ formatDate(video.publishedAt) }}</span>
+          <span>{{ formatDuration(video.duration) }}</span>
         </div>
         <div class="mt-3 space-y-2">
           <LinkCategory
@@ -115,14 +123,23 @@
 <script setup lang="ts">
 import type { VideoDetails } from '~~/types/youtube'
 import type { CategorizedLinks } from '~~/utils/url'
-import { formatViews, formatDate } from '~~/utils/format'
+import { formatViews, formatDate, formatDuration } from '~~/utils/format'
 import LinkCategory from './LinkCategory.vue'
 
 const props = defineProps<{
   video: VideoDetails
   hasMonetizationLinks: boolean
+  videoScore?: number
   isUserSponsorLink: (url: string) => boolean
   hasCodeIssue: (url: string) => boolean
   linkClass: (url: string, defaultClass: string) => string
 }>()
+
+const scoreBadgeClass = computed(() => {
+  const s = props.videoScore ?? 0
+  if (s >= 80) return 'bg-merch-bg/30 border-merch-border text-merch-text'
+  if (s >= 60) return 'bg-affiliate-bg/30 border-affiliate-border text-affiliate-text'
+  if (s >= 40) return 'bg-alert-bg/30 border-alert-border text-alert-text'
+  return 'bg-error-bg/30 border-error-border text-error-text'
+})
 </script>

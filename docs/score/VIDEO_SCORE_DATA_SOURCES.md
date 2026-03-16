@@ -17,6 +17,7 @@ This document maps each metric in the video score to its data source, calculatio
 | Binge-loop link       | 10     | `description` + `extractUrls`, `channelVideoIds` | YouTube rewards videos that keep viewers on-platform; internal links boost promotion. | Needs channel uploads; capped at 500 IDs         |
 | Pinned comment        | 10     | **Deferred**                                     | Pinned comment drives engagement and conversions.                                | Not implemented in MVP                           |
 | HD quality            | 5      | `contentDetails.definition`                      | SD signals low production value; algorithm may restrict reach.                  | API may misreport for some uploads               |
+| Video tags            | 5      | `snippet.tags`                                   | Tags help YouTube understand and recommend your video.                           | None                                             |
 
 
 ## Penalties
@@ -35,6 +36,7 @@ This document maps each metric in the video score to its data source, calculatio
 YouTube API (videos.list) → snippet, contentDetails
   ├── title, description → chapters, title opt, above-fold, description SEO, binge-loop
   ├── thumbnails.maxres → custom thumbnail
+  ├── snippet.tags → video tags
   └── contentDetails.definition → HD quality
 
 Link check service → linkResults

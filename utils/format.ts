@@ -14,6 +14,15 @@ export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString()
 }
 
+/** Video duration (e.g. "12:34" or "1:23:45") */
+export const formatDuration = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 /** Relative time (e.g. "5 minutes ago") */
 export function formatRelativeTime(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
