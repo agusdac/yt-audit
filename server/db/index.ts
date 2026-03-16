@@ -8,6 +8,7 @@ import * as usersSchema from './schemas/users'
 import * as linkedChannelsSchema from './schemas/linkedChannels'
 import * as answeredCommentsSchema from './schemas/answeredComments'
 import * as creatorSettingsSchema from './schemas/creatorSettings'
+import * as scoreCacheSchema from './schemas/scoreCache'
 
 const schema = {
   ...linkCacheSchema,
@@ -17,7 +18,8 @@ const schema = {
   ...usersSchema,
   ...linkedChannelsSchema,
   ...answeredCommentsSchema,
-  ...creatorSettingsSchema
+  ...creatorSettingsSchema,
+  ...scoreCacheSchema
 }
 
 const pool = new Pool({

@@ -4,6 +4,7 @@ import type { VideoScoreResult } from '~~/utils/videoScore'
 import { getVideoDetails, getChannelVideoIds } from '~~/server/service/youtubeService'
 import { runLinkCheck } from '~~/server/service/linkCheckService'
 import { getLinkedChannels } from '~~/server/service/userService'
+import { getCachedVideoScore, setCachedVideoScore } from '~~/server/service/scoreCacheService'
 import { classifyLinks } from '~~/utils/url'
 import { parseISO8601ToSeconds, getVideoType } from '~~/utils/duration'
 import { calculateVideoScore } from '~~/utils/videoScore'
@@ -58,6 +59,34 @@ export default defineEventHandler(async (event): Promise<{
 
   const linkResults = await runLinkCheck(checks)
 
+  const forceRefresh = getQuery(event).refresh === '1'
+  const ttlHours = Number(config.scoreCacheTtlHours) || 24
+
+  let score: VideoScoreResult
+  if (!forceRefresh) {
+    const cached = await getCachedVideoScore(videoId, ttlHours)
+    if (cached) {
+      const video: VideoDetails = {
+        id: raw.id,
+        title: raw.snippet.title,
+        description: raw.snippet.description,
+        publishedAt: raw.snippet.publishedAt,
+        viewCount: parseInt(raw.statistics.viewCount) || 0,
+        likeCount: parseInt(raw.statistics.likeCount) || 0,
+        commentCount: parseInt(raw.statistics.commentCount) || 0,
+        duration: parseISO8601ToSeconds(raw.contentDetails.duration),
+        type: getVideoType(raw),
+        links,
+        hasPaidProductPlacement: raw.paidProductPlacementDetails?.hasPaidProductPlacement ?? false,
+        channelHandle: linkedChannel.handle,
+        thumbnails: raw.snippet.thumbnails ? { maxres: raw.snippet.thumbnails.maxres } : undefined,
+        definition: raw.contentDetails.definition,
+        channelId: raw.snippet.channelId
+      }
+      return { video, linkResults, score: cached }
+    }
+  }
+
   const channelVideoIds = await getChannelVideoIds(linkedChannel.handle, config.ytApiKey, 500)
 
   const video: VideoDetails = {
@@ -78,7 +107,7 @@ export default defineEventHandler(async (event): Promise<{
     channelId: raw.snippet.channelId
   }
 
-  const score = calculateVideoScore(
+  score = calculateVideoScore(
     {
       title: video.title,
       description: video.description,
@@ -91,6 +120,8 @@ export default defineEventHandler(async (event): Promise<{
     },
     videoId
   )
+
+  await setCachedVideoScore(videoId, score)
 
   return { video, linkResults, score }
 })

@@ -18,7 +18,7 @@ This document maps each metric in the channel score to its data source, calculat
 | Channel handle        | 10     | `snippet.customUrl`                                                | Handles are essential for tagging, Shorts discovery, and brand identity.       | None                                             |
 | Video watermark       | 10     | **Deferred**                                                       | Subscribe button on every video drives passive subscriptions.                  | Requires watermarks API + OAuth                   |
 | Visual branding       | 10     | `snippet.thumbnails.default`, `brandingSettings.image.bannerExternalUrl` | Missing banner or avatar signals abandoned or amateur channel to viewers and sponsors. | Both avatar and banner required                   |
-| Business & social links | 10   | `snippet.description` (regex for email, `extractUrls` for external) | Missing contact means missing brand deals; missing social links traps audience on YouTube. | Email regex may miss edge cases; external = non-youtube.com |
+| Business & social links | 10   | `snippet.description` (regex for email, `extractUrls` for external) | Missing contact means missing brand deals; missing social links traps audience on YouTube. | YouTube Data API v3 does not expose the "More Info" panel links; we use description only. Email regex may miss edge cases. |
 
 ## Penalties
 

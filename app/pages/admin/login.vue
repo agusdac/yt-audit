@@ -84,11 +84,16 @@ const impersonate = async () => {
   if (!impersonateHandle.value.trim() || !password.value) return
   isLoading.value = true
   try {
-    const res = await $fetch<{ redirect?: string }>('/api/admin/impersonate', {
+    await $fetch('/api/admin/impersonate', {
       method: 'POST',
       body: { password: password.value, handle: impersonateHandle.value.trim() }
     })
-    await navigateTo(res?.redirect ?? '/dashboard')
+    const me = await $fetch<{ user?: { id: string }; linkedChannels?: Array<{ handle: string }> }>('/api/auth/me')
+    if (!me?.linkedChannels?.length) {
+      error.value = 'Impersonation succeeded but channel data not available. Try refreshing.'
+      return
+    }
+    await navigateTo('/dashboard')
   } catch (e: unknown) {
     const err = e as { data?: { message?: string }; message?: string }
     error.value = err?.data?.message ?? err?.message ?? 'Impersonation failed'

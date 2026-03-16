@@ -174,6 +174,7 @@ onMounted(async () => {
 })
 
 const logout = async () => {
+  await $fetch('/api/admin/logout', { method: 'POST' })
   const { clear } = useUserSession()
   await clear()
   await navigateTo('/')

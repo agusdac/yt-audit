@@ -16,11 +16,20 @@
     </div>
 
     <template v-else-if="channelScore">
-      <div class="mb-6 flex items-center gap-3">
-        <NuxtLink to="/dashboard" class="text-sm text-text-muted hover:text-text-primary transition-colors">
-          ← Back to Dashboard
-        </NuxtLink>
-        <span v-if="channelHandle" class="text-sm text-text-muted">@{{ channelHandle }}</span>
+      <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-3">
+          <NuxtLink to="/dashboard" class="text-sm text-text-muted hover:text-text-primary transition-colors">
+            ← Back to Dashboard
+          </NuxtLink>
+          <span v-if="channelHandle" class="text-sm text-text-muted">@{{ channelHandle }}</span>
+        </div>
+        <button
+          type="button"
+          class="px-3 py-1.5 rounded-button text-sm font-medium bg-card-bg border border-border-default hover:bg-card-bg-attention disabled:opacity-60"
+          :disabled="loading"
+          @click="fetchScore(true)">
+          Refresh score
+        </button>
       </div>
 
       <ChannelScoreCard :score="channelScore" />
@@ -41,11 +50,12 @@ const error = ref<string | null>(null)
 const channelScore = ref<ChannelScoreResult | null>(null)
 const channelHandle = ref<string | null>(null)
 
-const fetchScore = async () => {
+const fetchScore = async (forceRefresh = false) => {
   loading.value = true
   error.value = null
   try {
-    const res = await $fetch<{ channelScore: ChannelScoreResult; channelHandle: string }>('/api/channel-score')
+    const url = forceRefresh ? '/api/channel-score?refresh=1' : '/api/channel-score'
+    const res = await $fetch<{ channelScore: ChannelScoreResult; channelHandle: string }>(url)
     channelScore.value = res.channelScore
     channelHandle.value = res.channelHandle
   } catch (e: unknown) {

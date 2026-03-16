@@ -3,6 +3,8 @@ import type { LinkCheckResult } from '~~/types/links'
 import { getChannelDetails, getChannelVideoIds, getVideoDetails } from '~~/server/service/youtubeService'
 import { runLinkCheck } from '~~/server/service/linkCheckService'
 import { getLinkedChannels } from '~~/server/service/userService'
+import { getCachedChannelScore, setCachedChannelScore } from '~~/server/service/scoreCacheService'
+import { getCachedVideoScore, setCachedVideoScore } from '~~/server/service/scoreCacheService'
 import { classifyLinks } from '~~/utils/url'
 import { getLinksToCheck } from '~~/utils/url'
 import { parseISO8601ToSeconds, getVideoType } from '~~/utils/duration'
@@ -42,6 +44,14 @@ export default defineEventHandler(async (event): Promise<{
     channelHandle = channels[0]!.handle
   }
 
+  const forceRefresh = getQuery(event).refresh === '1'
+  const ttlHours = Number(config.scoreCacheTtlHours) || 24
+
+  if (!forceRefresh) {
+    const cached = await getCachedChannelScore(channelHandle, ttlHours)
+    if (cached) return cached
+  }
+
   const details = await getChannelDetails(channelHandle, config.ytApiKey)
 
   const channelUrls = extractUrls(details.description)
@@ -79,21 +89,29 @@ export default defineEventHandler(async (event): Promise<{
     lastVideoPublishedAt = sortedByDate[0]?.snippet.publishedAt
 
     for (const raw of rawVideos) {
-      const links = classifyLinks(raw.snippet.description)
-      const score = calculateVideoScore(
-        {
-          title: raw.snippet.title,
-          description: raw.snippet.description,
-          duration: parseISO8601ToSeconds(raw.contentDetails.duration),
-          thumbnails: raw.snippet.thumbnails ? { maxres: raw.snippet.thumbnails.maxres } : undefined,
-          definition: raw.contentDetails.definition,
-          links,
-          linkResults: videoLinkResults,
-          channelVideoIds: allChannelVideoIds
-        },
-        raw.id
-      )
-      last10VideoScores.push(score.score)
+      let score: number
+      const cachedVideoScore = !forceRefresh ? await getCachedVideoScore(raw.id, ttlHours) : null
+      if (cachedVideoScore) {
+        score = cachedVideoScore.score
+      } else {
+        const links = classifyLinks(raw.snippet.description)
+        const videoScore = calculateVideoScore(
+          {
+            title: raw.snippet.title,
+            description: raw.snippet.description,
+            duration: parseISO8601ToSeconds(raw.contentDetails.duration),
+            thumbnails: raw.snippet.thumbnails ? { maxres: raw.snippet.thumbnails.maxres } : undefined,
+            definition: raw.contentDetails.definition,
+            links,
+            linkResults: videoLinkResults,
+            channelVideoIds: allChannelVideoIds
+          },
+          raw.id
+        )
+        score = videoScore.score
+        await setCachedVideoScore(raw.id, videoScore)
+      }
+      last10VideoScores.push(score)
     }
   }
 
@@ -107,5 +125,8 @@ export default defineEventHandler(async (event): Promise<{
     last10VideoScores
   })
 
-  return { channelScore, channelHandle }
+  const result = { channelScore, channelHandle }
+  await setCachedChannelScore(channelHandle, result)
+
+  return result
 })

@@ -16,10 +16,17 @@
     </div>
 
     <template v-else-if="data">
-      <div class="mb-6 flex items-center gap-3">
+      <div class="mb-6 flex items-center justify-between gap-3 flex-wrap">
         <NuxtLink to="/videos" class="text-sm text-text-muted hover:text-text-primary transition-colors">
           ← Back to Videos
         </NuxtLink>
+        <button
+          type="button"
+          class="px-3 py-1.5 rounded-button text-sm font-medium bg-card-bg border border-border-default hover:bg-card-bg-attention disabled:opacity-60"
+          :disabled="loading"
+          @click="fetchVideo(true)">
+          Refresh score
+        </button>
       </div>
 
       <div class="space-y-8">
@@ -123,13 +130,12 @@ const hasLinks = computed(() => {
   return l.sponsors.length + l.affiliates.length + l.merch.length + l.socialWithRevenue.length + l.other.length > 0
 })
 
-const fetchVideo = async () => {
+const fetchVideo = async (forceRefresh = false) => {
   loading.value = true
   error.value = null
   try {
-    const res = await $fetch<{ video: VideoDetails; linkResults: LinkCheckResult[]; score: VideoScoreResult }>(
-      `/api/video/${videoId}`
-    )
+    const url = forceRefresh ? `/api/video/${videoId}?refresh=1` : `/api/video/${videoId}`
+    const res = await $fetch<{ video: VideoDetails; linkResults: LinkCheckResult[]; score: VideoScoreResult }>(url)
     data.value = res
   } catch (e: unknown) {
     const err = e as { data?: { message?: string }; statusCode?: number }

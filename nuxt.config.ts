@@ -41,6 +41,7 @@ export default defineNuxtConfig({
     maxVideosToFetch: Number(process.env.MAX_VIDEOS_TO_FETCH) || 200,
     auditCacheTtlHours: Number(process.env.AUDIT_CACHE_TTL_HOURS) || 24,
     linkCacheTtlHours: Number(process.env.LINK_CACHE_TTL_HOURS) || 24,
+    scoreCacheTtlHours: Number(process.env.SCORE_CACHE_TTL_HOURS) || 24,
     commentsFetchMaxVideos: Number(process.env.COMMENTS_FETCH_MAX_VIDEOS) || 50,
     detectIntentViaHf: process.env.DETECT_INTENT_VIA_HF === 'true',
     hfToken: process.env.HF_TOKEN || '',

@@ -92,18 +92,27 @@ export async function findUserByHandle(handle: string): Promise<string | null> {
 }
 
 export async function getOrCreateImpersonationUser(
-  channelInfo: { channelId: string; handle: string; channelTitle: string }
+  channelInfo: { channelId: string; handle: string; channelTitle: string; avatarUrl?: string }
 ): Promise<string> {
   const existing = await findUserByHandle(channelInfo.handle)
-  if (existing) return existing
+  if (existing) {
+    if (channelInfo.avatarUrl) {
+      await db.update(users).set({ avatarUrl: channelInfo.avatarUrl, updatedAt: new Date() }).where(eq(users.id, existing))
+    }
+    return existing
+  }
 
   const googleId = `impersonate-${channelInfo.channelId}`
   const existingImpersonation = await db.query.users.findFirst({
     where: eq(users.googleId, googleId),
     columns: { id: true }
   })
+  const now = new Date()
   if (existingImpersonation) {
     await syncLinkedChannels(existingImpersonation.id, [channelInfo])
+    if (channelInfo.avatarUrl) {
+      await db.update(users).set({ avatarUrl: channelInfo.avatarUrl, updatedAt: now }).where(eq(users.id, existingImpersonation.id))
+    }
     return existingImpersonation.id
   }
 
@@ -113,7 +122,7 @@ export async function getOrCreateImpersonationUser(
       googleId,
       email: `impersonate-${channelInfo.handle}@local`,
       name: `Impersonation: @${channelInfo.handle}`,
-      avatarUrl: null,
+      avatarUrl: channelInfo.avatarUrl ?? null,
       refreshToken: null
     })
     .returning({ id: users.id })

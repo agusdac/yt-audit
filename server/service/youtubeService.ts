@@ -3,11 +3,15 @@ import type { YouTubeChannelResponse, YouTubePlaylistResponse, YouTubeVideoDetai
 export const getChannelByHandle = async (
   handle: string,
   ytApiKey: string
-): Promise<{ channelId: string; handle: string; channelTitle: string }> => {
+): Promise<{ channelId: string; handle: string; channelTitle: string; avatarUrl?: string }> => {
   const data = await $fetch<{
     items?: Array<{
       id: string
-      snippet: { title: string; customUrl?: string }
+      snippet: {
+        title: string
+        customUrl?: string
+        thumbnails?: { default?: { url: string }; medium?: { url: string }; high?: { url: string } }
+      }
     }>
   }>(
     'https://youtube.googleapis.com/youtube/v3/channels',
@@ -20,10 +24,13 @@ export const getChannelByHandle = async (
   }
   const ch = data.items[0]!
   const handleStr = ch.snippet.customUrl?.replace(/^@/, '') ?? handle.replace(/^@/, '')
+  const thumbnails = ch.snippet.thumbnails
+  const avatarUrl = thumbnails?.high?.url ?? thumbnails?.medium?.url ?? thumbnails?.default?.url
   return {
     channelId: ch.id,
     handle: handleStr,
-    channelTitle: ch.snippet.title
+    channelTitle: ch.snippet.title,
+    avatarUrl
   }
 }
 
