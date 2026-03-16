@@ -74,6 +74,7 @@
           :on-clear-error="store.clearError"
           :scheduled-audit-enabled="store.creatorSettings?.scheduledAuditEnabled"
           :scheduled-audit-frequency="store.creatorSettings?.scheduledAuditFrequency"
+          channel-score-detail-href="/channel-score"
         />
       </template>
     </template>

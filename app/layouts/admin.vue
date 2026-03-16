@@ -43,6 +43,13 @@
               >
                 Export
               </NuxtLink>
+              <NuxtLink
+                to="/admin/channel-score"
+                class="px-3 py-1.5 rounded-button text-sm font-medium transition-colors"
+                :class="$route.path.startsWith('/admin/channel-score') ? 'bg-filter-bg-active border border-filter-border-active text-filter-text-active' : 'text-text-muted hover:text-text-primary hover:bg-filter-bg'"
+              >
+                Channel Score
+              </NuxtLink>
             </nav>
           </div>
           <div class="flex items-center gap-2">

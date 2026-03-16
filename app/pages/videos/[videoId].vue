@@ -149,5 +149,8 @@ watch(
   { immediate: false }
 )
 
-useSeoMeta({ title: () => (data.value?.video?.title ? `${data.value.video.title} | YT-Audit` : 'Video | YT-Audit') })
+const pageTitle = computed(() =>
+  data.value?.video?.title ? `${data.value.video.title} | YT-Audit` : 'Video | YT-Audit'
+)
+useSeoMeta({ title: pageTitle })
 </script>

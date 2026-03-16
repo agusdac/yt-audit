@@ -120,6 +120,10 @@
         </div>
 
         <div class="lg:col-span-1 space-y-4">
+          <ChannelScoreWidget
+            :channel-handle="props.channelHandleForScore"
+            :detail-href="props.channelScoreDetailHref ?? '/channel-score'"
+          />
           <div class="rounded-card p-4 bg-card-bg border-2 border-border-default">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xl">📧</span>
@@ -185,6 +189,8 @@ const props = withDefaults(
     scheduledAuditEnabled?: boolean
     scheduledAuditFrequency?: 'weekly' | 'monthly'
     maxVisibleDeadLinks?: number
+    channelHandleForScore?: string
+    channelScoreDetailHref?: string
     onRunAudit?: () => void
     onRunLinkCheck?: () => void
     onFetchComments?: () => void

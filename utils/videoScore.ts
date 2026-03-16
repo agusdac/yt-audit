@@ -25,7 +25,7 @@ export interface ScoreStep {
   maxPoints: number
   passed: boolean
   explanation: string
-  dataSource: string
+  whyImportant: string
 }
 
 export interface ScorePenalty {
@@ -245,7 +245,7 @@ export const calculateVideoScore = (
     maxPoints: 15,
     passed: chapter.passed,
     explanation: chapter.explanation,
-    dataSource: 'description (timestamp regex)'
+    whyImportant: 'Google Search crawls timestamps for "Key Moments" in search results—opting out costs free traffic.'
   })
 
   const titleOpt = checkTitleOptimization(input.title)
@@ -256,7 +256,7 @@ export const calculateVideoScore = (
     maxPoints: 15,
     passed: titleOpt.passed,
     explanation: titleOpt.explanation,
-    dataSource: 'title'
+    whyImportant: 'Mobile truncates at 65 chars; power words/numbers boost CTR.'
   })
 
   const aboveFold = checkAboveTheFold(input.title, input.description)
@@ -267,7 +267,7 @@ export const calculateVideoScore = (
     maxPoints: 15,
     passed: aboveFold.passed,
     explanation: aboveFold.explanation,
-    dataSource: 'description (first 150 chars)'
+    whyImportant: 'YouTube uses first 150 chars to understand context and recommend to the right audience.'
   })
 
   const thumb = checkCustomThumbnail(input.thumbnails)
@@ -278,7 +278,7 @@ export const calculateVideoScore = (
     maxPoints: 10,
     passed: thumb.passed,
     explanation: thumb.explanation,
-    dataSource: 'snippet.thumbnails.maxres'
+    whyImportant: 'Custom thumbnail is baseline for CTR; auto-generated frames rarely convert.'
   })
 
   const descSeo = checkDescriptionSeoDepth(input.description, input.duration)
@@ -289,7 +289,7 @@ export const calculateVideoScore = (
     maxPoints: 10,
     passed: descSeo.passed,
     explanation: descSeo.explanation,
-    dataSource: 'description (word count), duration'
+    whyImportant: 'Algorithm needs text to place your video in Suggested feed.'
   })
 
   steps.push({
@@ -299,7 +299,7 @@ export const calculateVideoScore = (
     maxPoints: 10,
     passed: false,
     explanation: 'Requires captions API. Coming soon.',
-    dataSource: 'captions.list (deferred)'
+    whyImportant: 'Custom captions improve indexing and mobile mute viewing.'
   })
 
   const binge = checkBingeLoopLink(input.description, input.channelVideoIds)
@@ -310,7 +310,7 @@ export const calculateVideoScore = (
     maxPoints: 10,
     passed: binge.passed,
     explanation: binge.explanation,
-    dataSource: 'description + extractUrls, channelVideoIds'
+    whyImportant: 'YouTube rewards videos that keep viewers on-platform; internal links boost promotion.'
   })
 
   steps.push({
@@ -320,7 +320,7 @@ export const calculateVideoScore = (
     maxPoints: 10,
     passed: false,
     explanation: 'Requires commentThreads API. Coming soon.',
-    dataSource: 'commentThreads (deferred)'
+    whyImportant: 'Pinned comment drives engagement and conversions.'
   })
 
   const hd = checkHdQuality(input.definition)
@@ -331,7 +331,7 @@ export const calculateVideoScore = (
     maxPoints: 5,
     passed: hd.passed,
     explanation: hd.explanation,
-    dataSource: 'contentDetails.definition'
+    whyImportant: 'SD signals low production value; algorithm may restrict reach.'
   })
 
   const clickAway = checkClickAwayPenalty(input.description, input.links)
@@ -364,8 +364,9 @@ export const calculateVideoScore = (
   const maxPossible = 100
   const earned = steps.reduce((s, st) => s + st.points, 0)
   const penaltyTotal = penalties.filter(p => p.applied).reduce((s, p) => s + p.points, 0)
+  const maxFromComputable = 80
   const rawScore = earned + penaltyTotal
-  const score = Math.max(0, Math.min(100, rawScore))
+  const score = Math.max(0, Math.min(100, Math.round(rawScore * (100 / maxFromComputable))))
 
   return {
     score,

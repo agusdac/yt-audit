@@ -83,6 +83,8 @@
           :on-run-audit="runAudit"
           :on-fetch-comments="store.fetchComments"
           :on-clear-error="store.clearError"
+          :channel-handle-for-score="store.channelHandles[0]"
+          :channel-score-detail-href="store.channelHandles[0] ? `/admin/channel-score?handle=${encodeURIComponent(store.channelHandles[0])}` : '/admin/channel-score'"
         >
           <template #check-links-cta>
             <button

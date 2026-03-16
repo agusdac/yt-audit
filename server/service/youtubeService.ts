@@ -69,6 +69,60 @@ export const getVideoDetails = async (chunkedIds: string, ytApiKey: string) => {
   return details.items
 }
 
+export interface ChannelDetails {
+  channelId: string
+  handle: string
+  description: string
+  customUrl?: string
+  thumbnails?: { default?: { url: string } }
+  brandingSettings?: {
+    channel?: { unsubscribedTrailer?: string }
+    watch?: { featuredPlaylistId?: string }
+    image?: { bannerExternalUrl?: string }
+  }
+}
+
+export const getChannelDetails = async (
+  handle: string,
+  ytApiKey: string
+): Promise<ChannelDetails> => {
+  const data = await $fetch<{
+    items?: Array<{
+      id: string
+      snippet: {
+        title: string
+        description: string
+        customUrl?: string
+        thumbnails?: { default?: { url: string }; medium?: { url: string }; high?: { url: string } }
+      }
+      brandingSettings?: {
+        channel?: { unsubscribedTrailer?: string }
+        watch?: { featuredPlaylistId?: string }
+        image?: { bannerExternalUrl?: string }
+      }
+    }>
+  }>('https://youtube.googleapis.com/youtube/v3/channels', {
+    query: {
+      part: 'snippet,brandingSettings',
+      forHandle: handle.replace(/^@/, ''),
+      key: ytApiKey
+    }
+  })
+  if (!data.items?.length) {
+    throw createError({ statusCode: 404, statusMessage: `Channel @${handle} not found` })
+  }
+  const ch = data.items[0]!
+  const handleStr = ch.snippet.customUrl?.replace(/^@/, '') ?? handle.replace(/^@/, '')
+  return {
+    channelId: ch.id,
+    handle: handleStr,
+    description: ch.snippet.description ?? '',
+    customUrl: ch.snippet.customUrl,
+    thumbnails: ch.snippet.thumbnails ? { default: ch.snippet.thumbnails.default } : undefined,
+    brandingSettings: ch.brandingSettings
+  }
+}
+
 export const getChannelVideoIds = async (
   handle: string,
   ytApiKey: string,

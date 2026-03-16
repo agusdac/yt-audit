@@ -77,7 +77,7 @@ async function detectPurchaseIntentViaHF(text: string, hfToken: string): Promise
     )
     const item = Array.isArray(res) ? res[0] : res
     if (item && typeof item === 'object' && 'label' in item) {
-      return String(item.label).toLowerCase() === 'yes' || (item.score && item.score > 0.5)
+      return (String(item.label).toLowerCase() === 'yes') || (!!item.score && item.score > 0.5)
     }
   } catch {
     // Fallback to keywords on API failure

@@ -1,9 +1,9 @@
 <template>
   <div class="rounded-card bg-card-bg border border-border-default overflow-hidden">
     <div class="px-6 py-4 border-b border-border-default">
-      <h3 class="font-bold text-lg text-text-primary">Metadata Score</h3>
+      <h3 class="font-bold text-lg text-text-primary">Channel Metadata Score</h3>
       <p class="text-sm text-text-muted mt-1">
-        Optimizes for Google search and YouTube recommendations. Metadata only—no content analysis.
+        Channel setup + recent video scores. Metadata only—no content analysis.
       </p>
     </div>
     <div class="p-6 space-y-6">
@@ -16,7 +16,9 @@
         </div>
         <div>
           <p class="text-3xl font-bold text-text-primary">{{ score.score }}/{{ score.maxPossible }}</p>
-          <p class="text-sm text-text-muted">How well your metadata helps discovery</p>
+          <p class="text-sm text-text-muted">
+            Setup {{ score.setupScore }}/100 · Recent {{ score.recentContentScore }}/100
+          </p>
         </div>
       </div>
 
@@ -72,10 +74,10 @@
 </template>
 
 <script setup lang="ts">
-import type { VideoScoreResult } from '~~/utils/videoScore'
+import type { ChannelScoreResult } from '~~/utils/channelScore'
 
 const props = defineProps<{
-  score: VideoScoreResult
+  score: ChannelScoreResult
 }>()
 
 const doingWell = computed(() => props.score.steps.filter((s) => s.passed && s.points > 0))
