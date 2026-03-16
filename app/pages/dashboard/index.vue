@@ -12,7 +12,24 @@
     </div>
 
     <template v-else>
-      <div v-if="!store.hasVideos" class="rounded-card p-8 bg-card-bg border border-border-default text-center">
+      <div v-if="store.isLoading || store.isCheckingLinks" class="mb-6">
+        <p class="text-text-muted mb-2 font-medium">
+          {{ store.isCheckingLinks ? 'Checking links...' : 'Running audit...' }}
+        </p>
+        <p class="text-text-muted text-sm mb-4">
+          This can take several minutes for channels with many videos.
+        </p>
+        <ul class="text-sm text-text-muted/80 space-y-1 mb-4 list-disc list-inside">
+          <li>{{ store.isCheckingLinks ? 'Verifying link status' : 'Fetching videos from YouTube' }}</li>
+          <li>{{ store.isCheckingLinks ? 'Updating results' : 'Checking links' }}</li>
+          <li>{{ store.isCheckingLinks ? 'Done soon' : 'Fetching comments' }}</li>
+        </ul>
+        <div class="h-1 rounded-full bg-border-default overflow-hidden mb-4">
+          <div class="h-full bg-gradient-to-r from-btn-from to-btn-to animate-pulse w-1/3" />
+        </div>
+        <AuditSkeleton />
+      </div>
+      <div v-else-if="!store.hasVideos" class="rounded-card p-8 bg-card-bg border border-border-default text-center">
         <h2 class="text-xl font-bold text-text-primary mb-2">Run your first audit</h2>
         <p class="text-text-muted mb-6 max-w-md mx-auto">
           Scan your video descriptions for dead links, expired codes, and revenue impact. We'll show you exactly what to
@@ -26,8 +43,8 @@
         </div>
         <button type="button"
           class="px-6 py-3 rounded-button font-semibold bg-gradient-to-r from-btn-from to-btn-to shadow-btn hover:from-btn-hover-from hover:to-btn-hover-to disabled:opacity-60 disabled:cursor-not-allowed"
-          :disabled="store.isLoading || store.isCheckingLinks" @click="store.runAudit">
-          {{ store.isLoading ? 'Auditing...' : store.isCheckingLinks ? 'Checking links...' : 'Run Audit' }}
+          @click="store.runAudit">
+          Run Audit
         </button>
       </div>
 

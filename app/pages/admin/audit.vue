@@ -30,7 +30,7 @@
           :disabled="store.isLoading || store.isCheckingLinks || store.channelHandles.length === 0"
           @click="runAudit"
         >
-          {{ store.isLoading ? 'Auditing...' : store.isCheckingLinks ? 'Checking links...' : 'Run Audit' }}
+          {{ store.isLoading ? 'Running audit...' : store.isCheckingLinks ? 'Checking links...' : 'Run Audit' }}
         </button>
       </div>
 
@@ -41,7 +41,20 @@
       </div>
 
       <div v-if="store.isLoading || store.isCheckingLinks" class="mb-6">
-        <p class="text-text-muted mb-4">{{ store.isCheckingLinks ? 'Checking links...' : 'Fetching videos...' }}</p>
+        <p class="text-text-muted mb-2 font-medium">
+          {{ store.isCheckingLinks ? 'Checking links...' : 'Running audit...' }}
+        </p>
+        <p class="text-text-muted text-sm mb-4">
+          This can take several minutes for channels with many videos.
+        </p>
+        <ul class="text-sm text-text-muted/80 space-y-1 mb-4 list-disc list-inside">
+          <li>Fetching videos from YouTube</li>
+          <li>Checking links</li>
+          <li>Fetching comments</li>
+        </ul>
+        <div class="h-1 rounded-full bg-border-default overflow-hidden mb-4">
+          <div class="h-full bg-gradient-to-r from-btn-from to-btn-to animate-pulse w-1/3" />
+        </div>
         <AuditSkeleton />
       </div>
 

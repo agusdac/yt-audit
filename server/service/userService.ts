@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '~~/server/db'
 import { users } from '~~/server/db/schemas/users'
 import { linkedChannels } from '~~/server/db/schemas/linkedChannels'
@@ -79,4 +79,45 @@ export async function syncLinkedChannels(userId: string, channels: Array<{ chann
       channelTitle: ch.channelTitle ?? null
     })
   }
+}
+
+export async function findUserByHandle(handle: string): Promise<string | null> {
+  const normalized = handle.trim().replace(/^@/, '').toLowerCase()
+  const rows = await db
+    .select({ userId: linkedChannels.userId })
+    .from(linkedChannels)
+    .where(sql`lower(${linkedChannels.handle}) = ${normalized}`)
+    .limit(1)
+  return rows[0]?.userId ?? null
+}
+
+export async function getOrCreateImpersonationUser(
+  channelInfo: { channelId: string; handle: string; channelTitle: string }
+): Promise<string> {
+  const existing = await findUserByHandle(channelInfo.handle)
+  if (existing) return existing
+
+  const googleId = `impersonate-${channelInfo.channelId}`
+  const existingImpersonation = await db.query.users.findFirst({
+    where: eq(users.googleId, googleId),
+    columns: { id: true }
+  })
+  if (existingImpersonation) {
+    await syncLinkedChannels(existingImpersonation.id, [channelInfo])
+    return existingImpersonation.id
+  }
+
+  const [inserted] = await db
+    .insert(users)
+    .values({
+      googleId,
+      email: `impersonate-${channelInfo.handle}@local`,
+      name: `Impersonation: @${channelInfo.handle}`,
+      avatarUrl: null,
+      refreshToken: null
+    })
+    .returning({ id: users.id })
+  const userId = inserted!.id
+  await syncLinkedChannels(userId, [channelInfo])
+  return userId
 }

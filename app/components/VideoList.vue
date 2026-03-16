@@ -1,174 +1,111 @@
 <template>
-  <div class="space-y-6">
-    <!-- Revenue loss summary: prominent at top when dead links exist -->
+  <div class="space-y-8">
+    <!-- Revenue loss summary -->
     <div v-if="totalDeadLinkRevenueLoss > 0"
-      class="rounded-card px-6 py-5 bg-error-bg border-2 border-error-border text-center">
+      class="rounded-card px-6 py-5 bg-error-bg/30 border border-error-border text-center">
       <p class="text-3xl md:text-4xl font-bold text-error-text">
         You're losing ~${{ Math.round(totalDeadLinkRevenueLoss) }}/month to dead links
       </p>
       <p class="text-sm mt-2 text-error-text/80">Fix the links below to stop the bleed.</p>
     </div>
 
-    <!-- Dead links: fix these first -->
-    <div v-if="deadLinksWithRevenue.length > 0"
-      class="rounded-card bg-error-bg/40 border-2 border-error-border overflow-hidden">
+    <!-- Export replacement list -->
+    <div v-if="(deadLinksWithRevenue.length > 0 || redirectedLinksWithRevenue.length > 0) && hasAnyReplacement"
+      class="rounded-card p-4 bg-filter-bg border border-border-default">
       <button type="button"
-        class="w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-error-bg/30 transition-colors"
-        @click="deadLinksOpen = !deadLinksOpen">
-        <h3 class="font-bold text-lg text-error-text">Dead links — fix these first</h3>
-        <span class="text-sm text-error-text/80">{{ deadLinksWithRevenue.length }} link{{ deadLinksWithRevenue.length >
-          1 ? 's' : '' }}</span>
-        <span class="text-error-text text-xl transition-transform" :class="deadLinksOpen ? 'rotate-180' : ''">▼</span>
+        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+        @click="exportReplacementCsv">
+        Export replacement list (CSV)
       </button>
-      <div v-show="deadLinksOpen" class="p-6 pt-0 space-y-4">
-        <div v-for="item in deadLinksWithRevenue" :key="item.url"
-          class="rounded-lg p-4 bg-card-bg border border-error-border space-y-3">
-          <p class="text-sm text-error-text line-through break-all font-mono">{{ item.url }}</p>
-          <p class="text-sm text-text-muted">
-            {{ item.videoIds.length }} video{{ item.videoIds.length > 1 ? 's' : '' }} affected
-            · ~${{ Math.round(item.revenueLoss) }}/month estimated loss
-          </p>
-          <div class="flex flex-wrap gap-2 items-center">
-            <label class="flex items-center gap-2 min-w-0 flex-1">
-              <span class="text-sm text-text-muted whitespace-nowrap">Replace with:</span>
-              <input v-model="replacementUrls[item.url]" type="url" placeholder="https://new-link.com"
-                class="flex-1 min-w-[200px] px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted" />
-            </label>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <a v-if="item.firstVideoId" :href="`https://studio.youtube.com/video/${item.firstVideoId}/edit`"
-              target="_blank" rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 px-4 py-2 rounded-button text-sm font-semibold bg-error-bg border-2 border-error-border text-error-text hover:opacity-90 hover:border-error-text transition-all">
-              Fix: Edit in YouTube Studio →
-            </a>
-            <button v-if="replacementUrls[item.url]" type="button"
-              class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-              @click="copyReplacementList(item)">
-              Copy replacement list
-            </button>
-            <button v-if="item.videoIds?.length" type="button"
-              class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-              @click="copyStudioUrls(item.videoIds)">
-              Copy Studio URLs
-            </button>
-        </div>
+    </div>
+
+    <!-- Dead links -->
+    <LinkIssuesCard
+      v-if="deadLinksWithRevenue.length > 0"
+      variant="dead"
+      title="Dead links — fix these first"
+      :items="deadLinksWithRevenue"
+      :replacement-urls="replacementUrls"
+      @update:replacement="(url, value) => replacementUrls[url] = value"
+      @copy-replacement-list="copyReplacementList"
+      @copy-studio-urls="copyStudioUrls"
+    />
+
+    <!-- Simple dead links (no revenue data) -->
+    <div v-else-if="deadLinksCount > 0"
+      class="rounded-card flex items-start gap-4 px-5 py-4 bg-error-bg/20 border border-error-border">
+      <span class="text-4xl">🔗</span>
+      <div class="flex-1">
+        <p class="font-bold text-lg text-error-text">
+          {{ deadLinksCount }} dead link{{ deadLinksCount > 1 ? 's' : '' }} found
+        </p>
+        <p class="text-sm mt-1 text-error-text/80">
+          These URLs return 404 or 5xx errors. Update or remove them from your video descriptions.
+        </p>
       </div>
     </div>
 
-    <div v-if="(deadLinksWithRevenue.length > 0 || redirectedLinksWithRevenue.length > 0) && hasAnyReplacement"
-      class="rounded-card p-4 bg-filter-bg border border-border-default">
-        <button type="button"
-          class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-          @click="exportReplacementCsv">
-          Export replacement list (CSV)
-        </button>
-      </div>
+    <!-- Redirected links -->
+    <LinkIssuesCard
+      v-if="redirectedLinksWithRevenue.length > 0"
+      variant="redirected"
+      title="Redirected links"
+      :items="redirectedLinksWithRevenue"
+      :replacement-urls="replacementUrls"
+      @update:replacement="(url, value) => replacementUrls[url] = value"
+      @copy-replacement-list="copyReplacementList"
+      @copy-studio-urls="copyStudioUrls"
+    />
 
-      <div v-else-if="deadLinksCount > 0"
-        class="rounded-card flex items-start gap-4 px-5 py-4 bg-error-bg border-2 border-error-border">
-        <span class="text-4xl">🔗</span>
-        <div class="flex-1">
-          <p class="font-bold text-lg text-error-text">
-            {{ deadLinksCount }} dead link{{ deadLinksCount > 1 ? 's' : '' }} found
-          </p>
-          <p class="text-sm mt-1 text-error-text/80">
-            These URLs return 404 or 5xx errors. Update or remove them from your video descriptions.
-          </p>
-        </div>
+    <!-- Code issues -->
+    <div v-if="codeIssuesCount > 0" class="rounded-card bg-alert-bg/20 border border-alert-border overflow-hidden">
+      <button type="button"
+        class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-filter-bg transition-colors"
+        @click="codeIssuesOpen = !codeIssuesOpen">
+        <span class="text-2xl">🎟️</span>
+        <p class="flex-1 font-bold text-lg text-alert-text">
+          {{ codeIssuesCount }} link{{ codeIssuesCount > 1 ? 's' : '' }} may have expired codes
+        </p>
+        <span class="text-alert-text text-xl transition-transform flex-shrink-0"
+          :class="codeIssuesOpen ? 'rotate-180' : ''">▼</span>
+      </button>
+      <div v-show="codeIssuesOpen" class="px-5 pb-4 pt-0">
+        <p class="text-sm text-alert-text-muted">
+          Sponsor may have removed the code—you could be giving free advertising. Verify and update.
+        </p>
       </div>
+    </div>
 
-      <div v-if="redirectedLinksWithRevenue.length > 0"
-        class="rounded-card bg-alert-bg/40 border-2 border-alert-border overflow-hidden">
-        <button type="button"
-          class="w-full flex items-center justify-between gap-3 px-6 py-4 text-left hover:bg-alert-bg/30 transition-colors"
-          @click="redirectedOpen = !redirectedOpen">
-          <h3 class="font-bold text-lg text-alert-text">Redirected links</h3>
-          <span class="text-sm text-alert-text/80">{{ redirectedLinksWithRevenue.length }} link{{
-            redirectedLinksWithRevenue.length > 1 ? 's' : '' }}</span>
-          <span class="text-alert-text text-xl transition-transform"
-            :class="redirectedOpen ? 'rotate-180' : ''">▼</span>
-        </button>
-        <div v-show="redirectedOpen" class="p-6 pt-0 space-y-4">
-          <div v-for="item in redirectedLinksWithRevenue" :key="item.url"
-            class="rounded-lg p-4 bg-card-bg border border-alert-border space-y-3">
-            <p class="text-sm text-alert-text break-all font-mono">{{ item.url }}</p>
-            <p class="text-sm text-text-muted">
-              {{ item.videoIds.length }} video{{ item.videoIds.length > 1 ? 's' : '' }} affected
-            </p>
-            <div class="flex flex-wrap gap-2 items-center">
-              <label class="flex items-center gap-2 min-w-0 flex-1">
-                <span class="text-sm text-text-muted whitespace-nowrap">Replace with:</span>
-                <input v-model="replacementUrls[item.url]" type="url" placeholder="https://new-link.com"
-                  class="flex-1 min-w-[200px] px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted" />
-              </label>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <a v-if="item.firstVideoId" :href="`https://studio.youtube.com/video/${item.firstVideoId}/edit`"
-                target="_blank" rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-button text-sm font-semibold bg-alert-bg border-2 border-alert-border text-alert-text hover:opacity-90">
-                Edit in YouTube Studio →
-              </a>
-              <button v-if="replacementUrls[item.url]" type="button"
-                class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-                @click="copyReplacementList(item)">
-                Copy replacement list
-              </button>
-              <button v-if="item.videoIds?.length" type="button"
-                class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-                @click="copyStudioUrls(item.videoIds)">
-                Copy Studio URLs
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="codeIssuesCount > 0" class="rounded-card bg-alert-bg border-2 border-alert-border overflow-hidden">
-        <button type="button"
-          class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-alert-bg/70 transition-colors"
-          @click="codeIssuesOpen = !codeIssuesOpen">
-          <span class="text-2xl">🎟️</span>
-          <p class="flex-1 font-bold text-lg text-alert-text">
-            {{ codeIssuesCount }} link{{ codeIssuesCount > 1 ? 's' : '' }} may have expired codes
-          </p>
-          <span class="text-alert-text text-xl transition-transform flex-shrink-0"
-            :class="codeIssuesOpen ? 'rotate-180' : ''">▼</span>
-        </button>
-        <div v-show="codeIssuesOpen" class="px-5 pb-4 pt-0">
-          <p class="text-sm text-alert-text-muted">
-            Sponsor may have removed the code—you could be giving free advertising. Verify and update.
-          </p>
-        </div>
-      </div>
-
-      <div class="flex gap-4 overflow-x-auto pb-2" role="status" aria-live="polite" aria-atomic="true">
-        <div class="rounded-card px-5 py-3 bg-stat-bg border border-border-default flex-shrink-0">
+    <!-- Stat cards -->
+    <div class="flex gap-4 overflow-x-auto pb-2 scroll-area" role="status" aria-live="polite" aria-atomic="true">
+        <div class="rounded-card px-5 py-3 bg-card-bg border border-border-default flex-shrink-0">
           <span class="text-sm block text-text-muted">Videos scanned</span>
           <p class="text-2xl font-bold text-text-primary">{{ props.videos.length }}</p>
         </div>
         <div v-if="linkResults.length > 0"
-          class="rounded-card px-5 py-3 bg-error-bg border border-error-border flex-shrink-0">
+          class="rounded-card px-5 py-3 bg-error-bg/30 border border-error-border flex-shrink-0">
           <span class="text-sm block text-error-text/80">Dead</span>
           <p class="text-2xl font-bold text-error-text">{{ deadLinksCount }}</p>
         </div>
-        <div v-if="linkResults.length > 0" class="rounded-card px-5 py-3 bg-alert-bg border border-alert-border">
+        <div v-if="linkResults.length > 0"
+          class="rounded-card px-5 py-3 bg-alert-bg/30 border border-alert-border flex-shrink-0">
           <span class="text-sm block text-alert-text-muted">Redirected</span>
           <p class="text-2xl font-bold text-alert-text">{{ redirectedLinksCount }}</p>
         </div>
         <div v-if="linkResults.length > 0"
-          class="rounded-card px-5 py-3 bg-stat-bg border border-border-default flex-shrink-0">
+          class="rounded-card px-5 py-3 bg-merch-bg/20 border border-merch-border flex-shrink-0">
           <span class="text-sm block text-text-muted">OK</span>
           <p class="text-2xl font-bold text-merch-link">{{ okLinksCount }}</p>
         </div>
         <div v-if="codeIssuesCount > 0"
-          class="rounded-card px-5 py-3 bg-alert-bg border border-alert-border flex-shrink-0">
+          class="rounded-card px-5 py-3 bg-alert-bg/30 border border-alert-border flex-shrink-0">
           <span class="text-sm block text-alert-text-muted">Code issues</span>
           <p class="text-2xl font-bold text-alert-text">{{ codeIssuesCount }}</p>
         </div>
-      </div>
+    </div>
 
-      <!-- Filters: grouped by purpose -->
-      <div class="rounded-card p-4 bg-filter-bg border border-border-default space-y-3">
+    <!-- Filters -->
+    <div class="rounded-card p-4 bg-filter-bg border border-border-default space-y-3">
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-sm font-medium text-text-muted w-full sm:w-auto">Link type:</span>
           <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
@@ -210,10 +147,10 @@
             Paid placement
           </button>
         </div>
-      </div>
+    </div>
 
-      <!-- My sponsors -->
-      <div class="flex flex-wrap items-center gap-3">
+    <!-- My sponsors -->
+    <div class="flex flex-wrap items-center gap-3">
         <label class="flex items-center gap-2">
           <span class="text-sm text-text-muted">My sponsors:</span>
           <input v-model="userSponsorsInput" type="text" placeholder="nordvpn.com, expressvpn.com"
@@ -230,9 +167,10 @@
           <input v-model="checkOnlyMySponsors" type="checkbox" class="rounded" />
           <span class="text-sm text-text-muted">Check only my sponsor links</span>
         </label>
-      </div>
+    </div>
 
-      <div v-if="allLinksCount > 0" class="flex flex-col gap-3">
+    <!-- Link check actions -->
+    <div v-if="allLinksCount > 0" class="flex flex-col gap-3">
         <div v-if="isCheckingLinks" class="rounded-card p-4 bg-card-bg border border-border-default">
           <div class="flex items-center gap-3">
             <div
@@ -277,18 +215,20 @@
             Retry
           </button>
         </div>
-      </div>
+    </div>
 
-      <div class="space-y-4" role="list" aria-label="Videos">
+    <!-- Video list -->
+    <div class="space-y-4" role="list" aria-label="Videos">
         <div v-for="video in paginatedVideos" :key="video.id"
           :ref="(el) => { if (video.id === props.highlightVideoId) highlightRef = el as HTMLElement }"
-          :class="video.id === props.highlightVideoId ? 'ring-2 ring-alert-border rounded-card -m-0.5 p-0.5' : ''">
+          :class="video.id === props.highlightVideoId ? 'ring-2 ring-border-default rounded-card -m-0.5 p-0.5' : ''">
           <VideoCard :video="video" :has-monetization-links="hasMonetizationLinks(video.links)"
             :is-user-sponsor-link="isUserSponsorLink" :has-code-issue="hasCodeIssue" :link-class="linkClass" />
         </div>
-      </div>
+    </div>
 
-      <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 py-4">
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 py-4">
         <button type="button"
           class="px-4 py-2 rounded-button font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention hover:border-border-attention"
           :disabled="currentPage === 1" @click="currentPage = currentPage - 1">
@@ -302,7 +242,6 @@
           :disabled="currentPage === totalPages" @click="currentPage = currentPage + 1">
           Next
         </button>
-      </div>
     </div>
   </div>
 </template>
@@ -331,8 +270,6 @@ const props = withDefaults(
 
 const PAGE_SIZE = 10
 
-const deadLinksOpen = ref(true)
-const redirectedOpen = ref(false)
 const codeIssuesOpen = ref(false)
 const filterSponsor = ref(false)
 const filterAffiliate = ref(false)

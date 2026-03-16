@@ -1,5 +1,32 @@
 import type { YouTubeChannelResponse, YouTubePlaylistResponse, YouTubeVideoDetailResponse } from '../../types/youtube'
 
+export const getChannelByHandle = async (
+  handle: string,
+  ytApiKey: string
+): Promise<{ channelId: string; handle: string; channelTitle: string }> => {
+  const data = await $fetch<{
+    items?: Array<{
+      id: string
+      snippet: { title: string; customUrl?: string }
+    }>
+  }>(
+    'https://youtube.googleapis.com/youtube/v3/channels',
+    {
+      query: { part: 'snippet', forHandle: handle.replace(/^@/, ''), key: ytApiKey }
+    }
+  )
+  if (!data.items?.length) {
+    throw createError({ statusCode: 404, statusMessage: `Channel @${handle} not found` })
+  }
+  const ch = data.items[0]!
+  const handleStr = ch.snippet.customUrl?.replace(/^@/, '') ?? handle.replace(/^@/, '')
+  return {
+    channelId: ch.id,
+    handle: handleStr,
+    channelTitle: ch.snippet.title
+  }
+}
+
 export const getUploadsPlaylistId = async (handle: string, ytApiKey: string) => {
     const url = `https://youtube.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${handle}&key=${ytApiKey}`
     const data: YouTubeChannelResponse = await $fetch(url)

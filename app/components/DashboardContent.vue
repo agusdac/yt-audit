@@ -40,9 +40,22 @@
       </div>
     </div>
 
-    <div v-if="props.isLoading || props.isCheckingLinks">
+    <div v-if="props.isLoading || props.isCheckingLinks" class="mb-6">
+      <p class="text-text-muted mb-2 font-medium">
+        {{ props.isCheckingLinks ? 'Checking links...' : 'Running audit...' }}
+      </p>
+      <p class="text-text-muted text-sm mb-4">
+        This can take several minutes for channels with many videos.
+      </p>
+      <ul class="text-sm text-text-muted/80 space-y-1 mb-4 list-disc list-inside">
+        <li>{{ props.isCheckingLinks ? 'Verifying link status' : 'Fetching videos from YouTube' }}</li>
+        <li>{{ props.isCheckingLinks ? 'Updating results' : 'Checking links' }}</li>
+        <li>{{ props.isCheckingLinks ? 'Done soon' : 'Fetching comments' }}</li>
+      </ul>
+      <div class="h-1 rounded-full bg-border-default overflow-hidden mb-4">
+        <div class="h-full bg-gradient-to-r from-btn-from to-btn-to animate-pulse w-1/3" />
+      </div>
       <AuditSkeleton />
-      <p v-if="props.isCheckingLinks" class="text-sm text-text-muted mt-2">Checking links...</p>
     </div>
 
     <template v-else>

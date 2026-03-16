@@ -91,9 +91,15 @@ export async function runLinkCheck(
   const linkResults: LinkCheckResult[] = []
   const { getCachedLinkResult, setCachedLinkResult } = await import('./linkCacheService')
 
+  const cacheResults = await Promise.all(
+    uniqueUrls.map(async (url) => {
+      const cached = await getCachedLinkResult(url)
+      return { url, cached }
+    })
+  )
+
   const toFetch: string[] = []
-  for (const url of uniqueUrls) {
-    const cached = await getCachedLinkResult(url)
+  for (const { url, cached } of cacheResults) {
     if (cached) {
       linkResults.push({
         ...cached,

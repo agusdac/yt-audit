@@ -24,7 +24,7 @@ export async function saveAuditHistoryWithLinks(
   const deadLinks = linkResults.filter((r) => r.category === 'dead')
   const createdAt = Math.floor(Date.now() / 1000)
 
-  for (const handle of handles) {
+  const rows = handles.map((handle) => {
     const handleVideos = videos.filter((v) => v.channelHandle === handle)
     const videoIds = new Set(handleVideos.map((v) => v.id))
     const handleDeadLinks = deadLinks.filter((r) => (r.videoIds ?? []).some((id) => videoIds.has(id)))
@@ -33,14 +33,26 @@ export async function saveAuditHistoryWithLinks(
       const { revenueLoss: rl } = getRevenueLossForLink(r, videos)
       revenueLoss += rl
     }
-    await db.insert(auditHistory).values({
+    return {
       handle,
       videoCount: handleVideos.length,
       deadLinksCount: handleDeadLinks.length,
       revenueLoss: revenueLoss > 0 ? revenueLoss : null,
       createdAt
-    })
-  }
+    }
+  })
+
+  await Promise.all(
+    rows.map((row) =>
+      db.insert(auditHistory).values({
+        handle: row.handle,
+        videoCount: row.videoCount,
+        deadLinksCount: row.deadLinksCount,
+        revenueLoss: row.revenueLoss,
+        createdAt: row.createdAt
+      })
+    )
+  )
 }
 
 export async function getAuditHistory(limit = 50) {

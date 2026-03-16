@@ -23,6 +23,33 @@
           {{ isLoading ? 'Logging in...' : 'Login' }}
         </button>
       </form>
+
+      <div class="mt-6 pt-6 border-t border-border-default">
+        <h2 class="text-sm font-semibold text-text-muted mb-3">Or impersonate a creator</h2>
+        <p class="text-xs text-text-muted mb-3">
+          View the app as a specific creator. Uses the same admin password.
+        </p>
+        <div class="space-y-3">
+          <div>
+            <label for="handle" class="block text-sm text-text-muted mb-1">Channel handle</label>
+            <input
+              id="handle"
+              v-model="impersonateHandle"
+              type="text"
+              class="w-full px-4 py-2 rounded-button bg-card-bg border border-border-default text-text-primary focus:border-border-attention focus:outline-none placeholder:text-text-muted"
+              placeholder="@SomeCreator"
+            />
+          </div>
+          <button
+            type="button"
+            class="w-full px-4 py-2 rounded-button font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention disabled:opacity-50"
+            :disabled="isLoading || !impersonateHandle.trim() || !password"
+            @click="impersonate"
+          >
+            {{ isLoading ? 'Logging in...' : 'Login as creator' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -31,6 +58,7 @@
 definePageMeta({ layout: false })
 
 const password = ref('')
+const impersonateHandle = ref('')
 const error = ref('')
 const isLoading = ref(false)
 
@@ -46,6 +74,24 @@ const login = async () => {
   } catch (e: unknown) {
     const err = e as { data?: { message?: string }; message?: string }
     error.value = err?.data?.message ?? err?.message ?? 'Login failed'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const impersonate = async () => {
+  error.value = ''
+  if (!impersonateHandle.value.trim() || !password.value) return
+  isLoading.value = true
+  try {
+    const res = await $fetch<{ redirect?: string }>('/api/admin/impersonate', {
+      method: 'POST',
+      body: { password: password.value, handle: impersonateHandle.value.trim() }
+    })
+    await navigateTo(res?.redirect ?? '/dashboard')
+  } catch (e: unknown) {
+    const err = e as { data?: { message?: string }; message?: string }
+    error.value = err?.data?.message ?? err?.message ?? 'Impersonation failed'
   } finally {
     isLoading.value = false
   }

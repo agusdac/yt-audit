@@ -52,9 +52,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: 'Sign in or use admin/API access' })
   }
 
+  const auditStart = Date.now()
+  console.log(`[audit] Starting audit for handles: ${handles.join(', ')}`)
+
   try {
     const result = await runAudit(handles, config.ytApiKey)
     const videos = result.videos
+    console.log(`[audit] Fetched ${videos.length} videos in ${Date.now() - auditStart}ms`)
 
     const urlToVideoIds = new Map<string, string[]>()
     for (const video of videos) {
@@ -70,7 +74,10 @@ export default defineEventHandler(async (event) => {
 
     let linkResults: LinkCheckResult[] = []
     if (checks.length > 0) {
+      console.log(`[audit] Checking ${checks.length} links...`)
+      const linkCheckStart = Date.now()
       linkResults = await runLinkCheck(checks)
+      console.log(`[audit] Link check done in ${Date.now() - linkCheckStart}ms`)
     }
 
     let highIntentComments: YouTubeComment[] = []
@@ -81,18 +88,26 @@ export default defineEventHandler(async (event) => {
         highIntentComments = cached
       } else {
         const videosToFetch = videos.slice(0, maxVideos)
+        console.log(`[audit] Fetching comments for ${videosToFetch.length} videos...`)
+        const commentsStart = Date.now()
         const hfOptions = config.detectIntentViaHf && config.hfToken
           ? { useHF: true, hfToken: config.hfToken }
           : undefined
-        for (const video of videosToFetch) {
-          try {
-            const comments = await fetchCommentsForVideo(video.id, video.title, config.ytApiKey, 3, hfOptions)
+        const COMMENT_CONCURRENCY = 5
+        for (let i = 0; i < videosToFetch.length; i += COMMENT_CONCURRENCY) {
+          const batch = videosToFetch.slice(i, i + COMMENT_CONCURRENCY)
+          const batchResults = await Promise.all(
+            batch.map((video) =>
+              fetchCommentsForVideo(video.id, video.title, config.ytApiKey, 3, hfOptions)
+                .catch(() => [] as YouTubeComment[])
+            )
+          )
+          for (const comments of batchResults) {
             highIntentComments.push(...comments)
-          } catch {
-            // Skip videos that fail (e.g. comments disabled)
           }
         }
         await setCachedComments(userId, handles, highIntentComments)
+        console.log(`[audit] Comments fetched in ${Date.now() - commentsStart}ms`)
       }
     }
 
@@ -111,6 +126,8 @@ export default defineEventHandler(async (event) => {
     } catch {
       // ignore
     }
+
+    console.log(`[audit] Complete in ${Date.now() - auditStart}ms`)
 
     return {
       count: videos.length,

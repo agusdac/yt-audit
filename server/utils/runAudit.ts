@@ -11,42 +11,60 @@ export async function runAudit(
   ytApiKey: string
 ): Promise<{ count: number; videos: VideoDetails[] }> {
   const uniqueHandles = [...new Set(handles.map(normalizeHandle).filter(Boolean))]
-  const allVideos: VideoDetails[] = []
   const config = useRuntimeConfig()
+  const VIDEO_DETAILS_CONCURRENCY = 4
 
-  for (const handle of uniqueHandles) {
-    const playlistId = await getUploadsPlaylistId(handle, ytApiKey)
-    let allVideoIds: string[] = []
-    let nextPageToken: string | undefined = undefined
+  const handleResults = await Promise.all(
+    uniqueHandles.map(async (handle) => {
+      const handleStart = Date.now()
+      const playlistId = await getUploadsPlaylistId(handle, ytApiKey)
+      let allVideoIds: string[] = []
+      let nextPageToken: string | undefined = undefined
 
-    do {
-      const data = await getPlaylistVideos(playlistId, ytApiKey, nextPageToken)
-      allVideoIds.push(...data.items.map(i => i.contentDetails.videoId))
-      nextPageToken = data.nextPageToken
-      if (allVideoIds.length >= config.maxVideosToFetch) break
-    } while (nextPageToken)
+      do {
+        const data = await getPlaylistVideos(playlistId, ytApiKey, nextPageToken)
+        allVideoIds.push(...data.items.map(i => i.contentDetails.videoId))
+        nextPageToken = data.nextPageToken
+        if (allVideoIds.length >= config.maxVideosToFetch) break
+      } while (nextPageToken)
 
-    for (let i = 0; i < allVideoIds.length; i += 50) {
-      const chunk = allVideoIds.slice(i, i + 50).join(',')
-      const details = await getVideoDetails(chunk, ytApiKey)
-      for (const v of details) {
-        allVideos.push({
-          id: v.id,
-          title: v.snippet.title,
-          description: v.snippet.description,
-          links: classifyLinks(v.snippet.description),
-          viewCount: parseInt(v.statistics.viewCount) || 0,
-          likeCount: parseInt(v.statistics.likeCount) || 0,
-          commentCount: parseInt(v.statistics.commentCount) || 0,
-          duration: parseISO8601ToSeconds(v.contentDetails.duration),
-          type: getVideoType(v),
-          publishedAt: v.snippet.publishedAt,
-          hasPaidProductPlacement: v.paidProductPlacementDetails?.hasPaidProductPlacement ?? false,
-          channelHandle: handle
-        })
+      const chunks: string[] = []
+      for (let i = 0; i < allVideoIds.length; i += 50) {
+        chunks.push(allVideoIds.slice(i, i + 50).join(','))
       }
-    }
-  }
+
+      const chunkResults: Awaited<ReturnType<typeof getVideoDetails>>[] = []
+      for (let i = 0; i < chunks.length; i += VIDEO_DETAILS_CONCURRENCY) {
+        const batch = chunks.slice(i, i + VIDEO_DETAILS_CONCURRENCY)
+        const batchResults = await Promise.all(batch.map((chunk) => getVideoDetails(chunk, ytApiKey)))
+        chunkResults.push(...batchResults)
+      }
+
+      const videos: VideoDetails[] = []
+      for (const details of chunkResults) {
+        for (const v of details) {
+          videos.push({
+            id: v.id,
+            title: v.snippet.title,
+            description: v.snippet.description,
+            links: classifyLinks(v.snippet.description),
+            viewCount: parseInt(v.statistics.viewCount) || 0,
+            likeCount: parseInt(v.statistics.likeCount) || 0,
+            commentCount: parseInt(v.statistics.commentCount) || 0,
+            duration: parseISO8601ToSeconds(v.contentDetails.duration),
+            type: getVideoType(v),
+            publishedAt: v.snippet.publishedAt,
+            hasPaidProductPlacement: v.paidProductPlacementDetails?.hasPaidProductPlacement ?? false,
+            channelHandle: handle
+          })
+        }
+      }
+      console.log(`[audit] Fetched ${allVideoIds.length} videos for @${handle} in ${Date.now() - handleStart}ms`)
+      return videos
+    })
+  )
+
+  const allVideos = handleResults.flat()
 
   const seen = new Map<string, VideoDetails>()
   for (const v of allVideos) {
