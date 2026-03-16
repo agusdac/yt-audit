@@ -93,18 +93,26 @@ const checkChapterMarkers = (description: string, duration: number): { passed: b
   }
 }
 
-const checkTitleOptimization = (title: string): { passed: boolean; explanation: string } => {
+const checkTitleLength = (title: string): { passed: boolean; explanation: string } => {
   const len = title.length
-  const hasPowerWord = POWER_WORDS.some(w => title.toLowerCase().includes(w))
-  const hasNumber = /\d+/.test(title)
-  const under65 = len <= 65
-  const hasTrigger = hasPowerWord || hasNumber
-  const passed = under65 && hasTrigger
+  const passed = len <= 65
   return {
     passed,
     explanation: passed
-      ? `Title is ${len} chars and uses power words or numbers.`
-      : `Title ${len > 65 ? `(${len} chars) exceeds 65` : 'needs power words (How, Why, Secret, etc.) or numbers'}.`
+      ? `Title is ${len} chars (under 65).`
+      : `Title has ${len} chars. Mobile truncates at 65—shorten for better CTR.`
+  }
+}
+
+const checkTitleBoostWords = (title: string): { passed: boolean; explanation: string } => {
+  const hasPowerWord = POWER_WORDS.some(w => title.toLowerCase().includes(w))
+  const hasNumber = /\d+/.test(title)
+  const passed = hasPowerWord || hasNumber
+  return {
+    passed,
+    explanation: passed
+      ? 'Title uses power words or numbers to boost CTR.'
+      : 'Add power words (How, Why, Secret, etc.) or numbers to improve click-through.'
   }
 }
 
@@ -248,15 +256,26 @@ export const calculateVideoScore = (
     whyImportant: 'Google Search crawls timestamps for "Key Moments" in search results—opting out costs free traffic.'
   })
 
-  const titleOpt = checkTitleOptimization(input.title)
+  const titleLen = checkTitleLength(input.title)
   steps.push({
-    id: 'title',
-    name: 'Title optimization',
-    points: titleOpt.passed ? 15 : 0,
-    maxPoints: 15,
-    passed: titleOpt.passed,
-    explanation: titleOpt.explanation,
-    whyImportant: 'Mobile truncates at 65 chars; power words/numbers boost CTR.'
+    id: 'title-length',
+    name: 'Title length',
+    points: titleLen.passed ? 10 : 0,
+    maxPoints: 10,
+    passed: titleLen.passed,
+    explanation: titleLen.explanation,
+    whyImportant: 'Mobile truncates at 65 chars—longer titles get cut off and hurt CTR.'
+  })
+
+  const titleBoost = checkTitleBoostWords(input.title)
+  steps.push({
+    id: 'title-boost',
+    name: 'Title boost words',
+    points: titleBoost.passed ? 5 : 0,
+    maxPoints: 5,
+    passed: titleBoost.passed,
+    explanation: titleBoost.explanation,
+    whyImportant: 'Power words and numbers boost click-through rate.'
   })
 
   const aboveFold = checkAboveTheFold(input.title, input.description)

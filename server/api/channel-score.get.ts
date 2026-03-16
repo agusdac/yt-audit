@@ -64,6 +64,7 @@ export default defineEventHandler(async (event): Promise<{
   const videoIds = await getChannelVideoIds(channelHandle, config.ytApiKey, 10)
   let lastVideoPublishedAt: string | undefined
   const last10VideoScores: number[] = []
+  const last10VideoScoresWithIds: Array<{ videoId: string; score: number }> = []
 
   if (videoIds.length > 0) {
     const rawVideos = await getVideoDetails(videoIds.join(','), config.ytApiKey)
@@ -112,6 +113,7 @@ export default defineEventHandler(async (event): Promise<{
         await setCachedVideoScore(raw.id, videoScore)
       }
       last10VideoScores.push(score)
+      last10VideoScoresWithIds.push({ videoId: raw.id, score })
     }
   }
 
@@ -125,7 +127,7 @@ export default defineEventHandler(async (event): Promise<{
     last10VideoScores
   })
 
-  const result = { channelScore, channelHandle }
+  const result = { channelScore, channelHandle, last10VideoScores: last10VideoScoresWithIds }
   await setCachedChannelScore(channelHandle, result)
 
   return result

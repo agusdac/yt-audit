@@ -1,24 +1,22 @@
 <template>
   <div class="rounded-card bg-card-bg border border-border-default overflow-hidden">
-    <div class="px-4 py-3 border-b border-border-default flex items-center justify-between">
-      <div>
-        <h3 class="font-bold text-text-primary">Channel Score</h3>
-        <p class="text-xs text-text-muted mt-0.5">Metadata only—channel setup + recent videos</p>
-      </div>
+    <div class="px-4 py-3 border-b border-border-default flex flex-col gap-2">
       <div class="flex items-center gap-2">
+        <h3 class="font-bold text-text-primary">Channel Score</h3>
         <button type="button"
-          class="flex-shrink-0 p-1.5 rounded-button text-text-muted hover:text-text-primary hover:bg-card-bg-attention"
+          class="flex-shrink-0 p-1 rounded-button text-text-muted hover:text-text-primary hover:bg-card-bg-attention"
           title="Refresh score" :disabled="loading" @click="fetchScore(true)">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
-        <NuxtLink :to="detailHref"
-          class="flex-shrink-0 px-3 py-1.5 ml-2 rounded-button text-sm font-medium bg-card-bg border border-border-default hover:bg-card-bg-attention">
-          View details
-        </NuxtLink>
       </div>
+      <p class="text-xs text-text-muted">Metadata only—channel setup + recent videos</p>
+      <NuxtLink :to="detailHref"
+        class="inline-flex text-sm font-medium text-merch-link hover:underline w-fit">
+        View details →
+      </NuxtLink>
     </div>
     <div class="p-4">
       <div v-if="loading" class="flex items-center gap-3">

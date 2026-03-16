@@ -93,7 +93,7 @@ const impersonate = async () => {
       error.value = 'Impersonation succeeded but channel data not available. Try refreshing.'
       return
     }
-    await navigateTo('/dashboard')
+    window.location.href = '/dashboard'
   } catch (e: unknown) {
     const err = e as { data?: { message?: string }; message?: string }
     error.value = err?.data?.message ?? err?.message ?? 'Impersonation failed'

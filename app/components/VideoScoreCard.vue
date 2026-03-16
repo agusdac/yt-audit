@@ -16,7 +16,10 @@
         </div>
         <div>
           <p class="text-3xl font-bold text-text-primary">{{ score.score }}/{{ score.maxPossible }}</p>
-          <p class="text-sm text-text-muted">How well your metadata helps discovery</p>
+          <p class="text-sm text-text-muted">{{ scoreBadgeText }}</p>
+          <p v-if="score.score < 100" class="text-xs text-text-muted mt-0.5">
+            {{ 100 - score.score }} more points to reach 100
+          </p>
         </div>
       </div>
 
@@ -35,8 +38,13 @@
         </ul>
       </div>
 
+      <div v-if="doingWell.length === 0 && toImprove.length > 0" class="space-y-2">
+        <p class="text-sm text-text-muted">Start with the quick wins below—each one adds points.</p>
+      </div>
+
       <div v-if="toImprove.length > 0" class="space-y-2">
-        <h4 class="text-sm font-semibold text-alert-text">Improve</h4>
+        <h4 class="text-sm font-semibold text-alert-text">Quick wins</h4>
+        <p class="text-xs text-text-muted">Small changes, big impact</p>
         <ul class="space-y-2">
           <li
             v-for="step in toImprove"
@@ -64,6 +72,7 @@
             <span class="text-error-text mt-0.5">−</span>
             <span class="text-text-primary">{{ p.name }}</span>
             <span class="text-text-muted">— {{ p.explanation }}</span>
+            <span class="text-xs text-text-muted">Fix this to recover {{ Math.abs(p.points) }} points.</span>
           </li>
         </ul>
       </div>
@@ -85,6 +94,14 @@ const toImprove = computed(() =>
   )
 )
 const appliedPenalties = computed(() => props.score.penalties.filter((p) => p.applied))
+
+const scoreBadgeText = computed(() => {
+  const s = props.score.score
+  if (s >= 80) return 'Strong metadata'
+  if (s >= 60) return 'Good progress'
+  if (s >= 40) return 'Room to grow'
+  return 'Quick wins available'
+})
 
 const scoreColorClass = computed(() => {
   const s = props.score.score

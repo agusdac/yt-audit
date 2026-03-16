@@ -56,6 +56,7 @@
             :videos="store.videos"
             :sync-link-results-to-store="true"
             :highlight-video-id="route.query.videoId as string | undefined"
+            :video-scores="videoScores"
           />
         </ErrorBoundary>
       </div>
@@ -83,4 +84,21 @@ useSeoMeta({ title: 'All Videos | YT-Audit' })
 
 const route = useRoute()
 const store = useCreatorWorkspaceStore()
+
+const videoScores = ref<Record<string, number>>({})
+
+const fetchChannelScore = async () => {
+  if (!store.me?.linkedChannels?.length) return
+  try {
+    const res = await $fetch<{ last10VideoScores?: Array<{ videoId: string; score: number }> }>('/api/channel-score')
+    const list = res.last10VideoScores ?? []
+    videoScores.value = Object.fromEntries(list.map((x) => [x.videoId, x.score]))
+  } catch {
+    // ignore
+  }
+}
+
+watch(() => store.videos.length, (len) => {
+  if (len > 0) fetchChannelScore()
+}, { immediate: true })
 </script>

@@ -120,11 +120,13 @@ export default defineEventHandler(async (event) => {
       await setCachedAudit(ADMIN_USER_ID, handles, videos, linkResults)
     }
 
-    try {
-      const { saveAuditHistoryWithLinks } = await import('../service/auditHistoryService')
-      await saveAuditHistoryWithLinks(handles, videos, linkResults)
-    } catch {
-      // ignore
+    if (creatorUserId) {
+      try {
+        const { saveAuditHistoryWithLinks } = await import('../service/auditHistoryService')
+        await saveAuditHistoryWithLinks(handles, videos, linkResults)
+      } catch {
+        // ignore
+      }
     }
 
     console.log(`[audit] Complete in ${Date.now() - auditStart}ms`)

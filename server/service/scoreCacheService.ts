@@ -35,7 +35,7 @@ export const setCachedVideoScore = async (videoId: string, result: VideoScoreRes
 export const getCachedChannelScore = async (
   handle: string,
   ttlHours = DEFAULT_TTL_HOURS
-): Promise<{ channelScore: ChannelScoreResult; channelHandle: string } | null> => {
+): Promise<{ channelScore: ChannelScoreResult; channelHandle: string; last10VideoScores?: Array<{ videoId: string; score: number }> } | null> => {
   const key = normalizeHandle(handle)
   const minCachedAt = Math.floor(Date.now() / 1000) - ttlHours * 60 * 60
   const row = await db.query.channelScoreCache.findFirst({
@@ -48,7 +48,7 @@ export const getCachedChannelScore = async (
 
 export const setCachedChannelScore = async (
   handle: string,
-  data: { channelScore: ChannelScoreResult; channelHandle: string }
+  data: { channelScore: ChannelScoreResult; channelHandle: string; last10VideoScores?: Array<{ videoId: string; score: number }> }
 ) => {
   const key = normalizeHandle(handle)
   const cachedAt = Math.floor(Date.now() / 1000)

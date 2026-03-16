@@ -25,9 +25,15 @@
       </div>
       <div v-if="store.me?.linkedChannels?.length && !sidebarCollapsed" class="px-4 py-4 flex items-center gap-2">
         <div class="w-8 h-8 rounded-full bg-thumb-bg flex items-center justify-center overflow-hidden">
-          <img v-if="store.me?.user?.avatarUrl" :src="store.me.user.avatarUrl" :alt="store.me.user.name ?? ''"
-            class="w-full h-full object-cover" />
-          <span v-else class="text-xs text-text-muted">@</span>
+          <img
+            v-if="store.me?.user?.avatarUrl && !avatarError"
+            :src="store.me.user.avatarUrl"
+            :alt="store.me.user.name ?? ''"
+            referrerpolicy="no-referrer"
+            class="w-full h-full object-cover"
+            @error="avatarError = true"
+          />
+          <span v-else class="text-xs text-text-muted">{{ store.firstChannel?.handle?.[0]?.toUpperCase() ?? '@' }}</span>
         </div>
         <div class="min-w-0">
           <p class="text-sm font-medium text-text-primary truncate">@{{ store.firstChannel?.handle ?? 'Channel' }}</p>
@@ -98,10 +104,16 @@
           <span v-if="!sidebarCollapsed">{{ theme === 'dark' ? 'Light mode' : 'Dark mode' }}</span>
         </button>
         <div class="flex items-center gap-2 mb-2" :class="sidebarCollapsed ? 'justify-center' : ''">
-          <img v-if="store.me?.user?.avatarUrl" :src="store.me.user.avatarUrl" :alt="store.me.user.name ?? ''"
-            class="w-8 h-8 rounded-full flex-shrink-0" />
+          <img
+            v-if="store.me?.user?.avatarUrl && !avatarError"
+            :src="store.me.user.avatarUrl"
+            :alt="store.me.user.name ?? ''"
+            referrerpolicy="no-referrer"
+            class="w-8 h-8 rounded-full flex-shrink-0 object-cover"
+            @error="avatarError = true"
+          />
           <div v-else class="w-8 h-8 rounded-full bg-thumb-bg flex items-center justify-center flex-shrink-0">
-            <span class="text-xs text-text-muted">?</span>
+            <span class="text-xs text-text-muted">{{ store.firstChannel?.handle?.[0]?.toUpperCase() ?? store.me?.user?.name?.[0] ?? '?' }}</span>
           </div>
           <div v-if="!sidebarCollapsed" class="min-w-0 flex-1">
             <p class="text-sm font-medium text-text-primary truncate">{{ store.me?.user?.name ?? store.me?.user?.email
@@ -136,6 +148,7 @@ const store = useCreatorWorkspaceStore()
 const { theme, initTheme, toggleTheme } = useTheme()
 
 const sidebarCollapsed = ref(false)
+const avatarError = ref(false)
 
 function loadSidebarCollapsed() {
   if (import.meta.client) {
@@ -157,6 +170,8 @@ watch(sidebarCollapsed, (v) => {
     }
   }
 })
+
+watch(() => store.me?.user?.avatarUrl, () => { avatarError.value = false })
 
 onMounted(async () => {
   loadSidebarCollapsed()

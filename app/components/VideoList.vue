@@ -125,6 +125,27 @@
           </button>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm font-medium text-text-muted w-full sm:w-auto">Sort by:</span>
+          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+            :class="sortBy === 'date' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+            @click="sortBy = 'date'">
+            Date
+          </button>
+          <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+            :class="sortBy === 'views' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+            @click="sortBy = 'views'">
+            Views
+          </button>
+          <button
+            v-if="Object.keys(props.videoScores ?? {}).length > 0"
+            type="button"
+            class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
+            :class="sortBy === 'score' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
+            @click="sortBy = 'score'">
+            Score
+          </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
           <span class="text-sm font-medium text-text-muted w-full sm:w-auto">Video type:</span>
           <button type="button" class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
             :class="filterType === 'short' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
@@ -264,6 +285,7 @@ const props = withDefaults(
     syncLinkResultsToStore?: boolean
     linkResultsRef?: Ref<LinkCheckResult[]>
     highlightVideoId?: string
+    videoScores?: Record<string, number>
   }>(),
   { syncLinkResultsToStore: false }
 )
@@ -278,6 +300,7 @@ const filterType = ref<VideoType | null>(null)
 const filterPaidPlacement = ref(false)
 const filterMySponsors = ref(false)
 const userSponsorsInput = ref('')
+const sortBy = ref<'date' | 'views' | 'score'>('date')
 const userSponsors = ref<string[]>([])
 const checkOnlyMySponsors = ref(false)
 const currentPage = ref(1)
@@ -362,12 +385,31 @@ const matchesMySponsorsFilter = (video: VideoDetails): boolean => {
   return videoHasUserSponsorLinks(video)
 }
 
-/** Base sort: monetization links first, then by views */
+const getSortCompare = () => {
+  const scores = props.videoScores ?? {}
+  if (sortBy.value === 'date') {
+    return (a: VideoDetails, b: VideoDetails) =>
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  }
+  if (sortBy.value === 'views') {
+    return (a: VideoDetails, b: VideoDetails) => b.viewCount - a.viewCount
+  }
+  if (sortBy.value === 'score') {
+    return (a: VideoDetails, b: VideoDetails) => {
+      const aScore = scores[a.id] ?? -1
+      const bScore = scores[b.id] ?? -1
+      return bScore - aScore
+    }
+  }
+  return (a: VideoDetails, b: VideoDetails) => b.viewCount - a.viewCount
+}
+
+/** Base sort: monetization links first, then by selected sort */
 const baseSort = (a: VideoDetails, b: VideoDetails) => {
   const aHas = hasMonetizationLinks(a.links) ? 1 : 0
   const bHas = hasMonetizationLinks(b.links) ? 1 : 0
   if (aHas !== bHas) return bHas - aHas
-  return b.viewCount - a.viewCount
+  return getSortCompare()(a, b)
 }
 
 const filteredVideos = computed(() => {
@@ -406,7 +448,7 @@ const filteredVideos = computed(() => {
   })
 })
 
-watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors], () => {
+watch([filterSponsor, filterAffiliate, filterMerch, filterType, filterPaidPlacement, filterMySponsors, sortBy], () => {
   currentPage.value = 1
 })
 
