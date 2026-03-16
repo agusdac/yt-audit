@@ -39,6 +39,9 @@ export interface VideoDetails {
     links: CategorizedLinks,
     hasPaidProductPlacement: boolean
     channelHandle?: string
+    thumbnails?: { maxres?: { url: string } }
+    definition?: 'hd' | 'sd'
+    channelId?: string
 }
 
 export interface YouTubeVideoDetailSingleResponse {
@@ -48,6 +51,13 @@ export interface YouTubeVideoDetailSingleResponse {
         description: string
         publishedAt: string
         liveBroadcastContent: string
+        channelId?: string
+        thumbnails?: {
+            default?: { url: string }
+            medium?: { url: string }
+            high?: { url: string }
+            maxres?: { url: string }
+        }
     }
     statistics: {
         viewCount: string
@@ -56,6 +66,7 @@ export interface YouTubeVideoDetailSingleResponse {
     },
     contentDetails: {
         duration: string
+        definition?: 'hd' | 'sd'
     },
     paidProductPlacementDetails?: {
         hasPaidProductPlacement: boolean

@@ -83,14 +83,14 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-4">
-          <DeadLinkWatchdog :items="props.deadLinksWithRevenue" :max-visible="props.maxVisibleDeadLinks" :view-videos-href="props.viewVideosHref" />
+          <DeadLinkWatchdog :items="props.deadLinksWithRevenue" />
 
           <div v-if="(props.topVideosByRevenueLoss?.length ?? 0) > 0" class="rounded-card p-6 bg-card-bg border border-border-default">
             <h3 class="font-bold text-text-primary mb-3">Top videos by revenue loss</h3>
             <ul class="space-y-2">
               <li v-for="v in props.topVideosByRevenueLoss!.slice(0, 5)" :key="v.videoId" class="flex items-center justify-between gap-2">
                 <NuxtLink
-                  :to="`${props.viewVideosHref}?videoId=${v.videoId}`"
+                  :to="`/videos/${v.videoId}`"
                   class="text-sm text-text-primary hover:text-hover-link truncate flex-1 min-w-0"
                 >
                   {{ v.title }}

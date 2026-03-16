@@ -11,10 +11,12 @@
       <div class="space-y-4">
         <div v-for="item in sortedItems" :key="item.url"
           class="rounded-lg p-4 bg-card-bg border border-error-border space-y-3 relative">
-          <NuxtLink v-if="item.firstVideoId && props.viewVideosHref"
-            :to="`${props.viewVideosHref}?videoId=${item.firstVideoId}`"
+          <NuxtLink
+            v-if="item.firstVideoId"
+            :to="`/videos/${item.firstVideoId}`"
             class="absolute top-3 right-3 text-xs text-text-muted hover:text-hover-link truncate max-w-[120px] block text-right"
-            :title="item.firstVideoTitle || 'View video'">
+            :title="item.firstVideoTitle || 'View video'"
+          >
             {{ item.firstVideoTitle || 'View video' }}
           </NuxtLink>
           <p class="text-sm text-error-text line-through break-all font-mono pr-24">{{ item.url }}</p>
@@ -46,14 +48,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-const props = withDefaults(
-  defineProps<{
-    items: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string; firstVideoTitle?: string }>
-    maxVisible?: number
-    viewVideosHref?: string
-  }>(),
-  { maxVisible: undefined, viewVideosHref: '/videos' }
-)
+const props = defineProps<{
+  items: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string; firstVideoTitle?: string }>
+}>()
 
 
 const sectionOpen = ref(true)

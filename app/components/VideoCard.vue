@@ -4,11 +4,9 @@
     :class="hasMonetizationLinks ? 'bg-card-bg-attention border-border-attention hover:border-hover-border' : 'bg-card-bg border-border-default hover:border-hover-border'"
   >
     <div class="flex flex-col sm:flex-row gap-4 p-4">
-      <a
-        :href="`https://youtube.com/watch?v=${video.id}`"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="flex-shrink-0 w-full sm:w-48 rounded-lg overflow-hidden bg-thumb-bg"
+      <NuxtLink
+        :to="`/videos/${video.id}`"
+        class="flex-shrink-0 w-full sm:w-48 rounded-lg overflow-hidden bg-thumb-bg block"
         :class="video.type === 'short' ? 'aspect-[9/16] sm:w-32' : 'aspect-video'"
       >
         <img
@@ -16,7 +14,7 @@
           :alt="video.title"
           class="w-full h-full object-cover"
         />
-      </a>
+      </NuxtLink>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 mb-1 flex-wrap">
           <span
@@ -40,14 +38,12 @@
           </span>
         </div>
         <div class="flex items-start justify-between gap-2">
-          <a
-            :href="`https://youtube.com/watch?v=${video.id}`"
-            target="_blank"
-            rel="noopener noreferrer"
+          <NuxtLink
+            :to="`/videos/${video.id}`"
             class="font-semibold line-clamp-2 transition-colors block text-text-primary hover:text-hover-link flex-1 min-w-0"
           >
             {{ video.title }}
-          </a>
+          </NuxtLink>
           <a
             :href="`https://studio.youtube.com/video/${video.id}/edit`"
             target="_blank"

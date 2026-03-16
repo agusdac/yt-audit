@@ -28,43 +28,60 @@ export const getChannelByHandle = async (
 }
 
 export const getUploadsPlaylistId = async (handle: string, ytApiKey: string) => {
-    const url = `https://youtube.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${handle}&key=${ytApiKey}`
-    const data: YouTubeChannelResponse = await $fetch(url)
-    if (!data.items || data.items.length === 0) {
-        throw createError({ statusCode: 404, statusMessage: `Channel ${handle} not found` })
-    }
-    return data.items[0]!.contentDetails.relatedPlaylists.uploads
+  const url = `https://youtube.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=${handle}&key=${ytApiKey}`
+  const data = await $fetch<YouTubeChannelResponse>(url)
+  if (!data.items || data.items.length === 0) {
+    throw createError({ statusCode: 404, statusMessage: `Channel ${handle} not found` })
+  }
+  return data.items[0]!.contentDetails.relatedPlaylists.uploads
 }
 
 export const getPlaylistVideos = async (playlistId: string, ytApiKey: string, nextPageToken: string | undefined): Promise<YouTubePlaylistResponse> => {
-    const data = await $fetch<YouTubePlaylistResponse>(
-        'https://www.googleapis.com/youtube/v3/playlistItems',
-        {
-            query: {
-                part: 'contentDetails',
-                playlistId: playlistId,
-                maxResults: 50, // Max allowed per request
-                pageToken: nextPageToken,
-                key: ytApiKey
-            }
-        }
-    )
-    return data as YouTubePlaylistResponse
+  const data = await $fetch<YouTubePlaylistResponse>(
+    'https://www.googleapis.com/youtube/v3/playlistItems',
+    {
+      query: {
+        part: 'contentDetails',
+        playlistId: playlistId,
+        maxResults: 50, // Max allowed per request
+        pageToken: nextPageToken,
+        key: ytApiKey
+      }
+    }
+  )
+  return data as YouTubePlaylistResponse
 }
 
 export const getVideoDetails = async (chunkedIds: string, ytApiKey: string) => {
-    const details = await $fetch<YouTubeVideoDetailResponse>(
-        'https://www.googleapis.com/youtube/v3/videos',
-        {
-            query: {
-                part: 'snippet,statistics,contentDetails,paidProductPlacementDetails',
-                id: chunkedIds,
-                key: ytApiKey
-            }
-        }
-    )
-    if (!details.items || details.items.length === 0) {
-        throw createError({ statusCode: 404, statusMessage: `Videos ${chunkedIds} not found` })
+  const details = await $fetch<YouTubeVideoDetailResponse>(
+    'https://www.googleapis.com/youtube/v3/videos',
+    {
+      query: {
+        part: 'snippet,statistics,contentDetails,paidProductPlacementDetails',
+        id: chunkedIds,
+        key: ytApiKey
+      }
     }
-    return details.items
+  )
+  if (!details.items || details.items.length === 0) {
+    throw createError({ statusCode: 404, statusMessage: `Videos ${chunkedIds} not found` })
+  }
+  return details.items
+}
+
+export const getChannelVideoIds = async (
+  handle: string,
+  ytApiKey: string,
+  maxIds = 500
+): Promise<string[]> => {
+  const playlistId = await getUploadsPlaylistId(handle.replace(/^@/, ''), ytApiKey)
+  const ids: string[] = []
+  let nextPageToken: string | undefined
+  do {
+    const data = await getPlaylistVideos(playlistId, ytApiKey, nextPageToken)
+    ids.push(...data.items.map((i) => i.contentDetails.videoId))
+    nextPageToken = data.nextPageToken
+    if (ids.length >= maxIds) break
+  } while (nextPageToken)
+  return ids.slice(0, maxIds)
 }
