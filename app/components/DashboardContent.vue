@@ -16,25 +16,18 @@
           <span class="text-sm text-text-muted">
             Last audit: {{ formatRelativeTime(props.lastAuditAt) }}
           </span>
-          <span
-            v-if="props.isCacheStale"
-            class="px-2 py-0.5 rounded text-xs font-medium bg-alert-bg border border-alert-border text-alert-text"
-          >
+          <span v-if="props.isCacheStale"
+            class="px-2 py-0.5 rounded text-xs font-medium bg-alert-bg border border-alert-border text-alert-text">
             Data may be stale
           </span>
         </div>
-        <button
-          type="button"
+        <button type="button"
           class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default hover:bg-card-bg-attention disabled:opacity-60 disabled:cursor-not-allowed"
-          :disabled="props.isLoading || props.isCheckingLinks"
-          @click="props.onRunAudit?.()"
-        >
+          :disabled="props.isLoading || props.isCheckingLinks" @click="props.onRunAudit?.()">
           {{ props.isLoading ? 'Auditing...' : props.isCheckingLinks ? 'Checking links...' : 'Run Audit' }}
         </button>
-        <NuxtLink
-          :to="props.viewVideosHref"
-          class="px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to hover:from-btn-hover-from hover:to-btn-hover-to"
-        >
+        <NuxtLink :to="props.viewVideosHref"
+          class="px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to hover:from-btn-hover-from hover:to-btn-hover-to">
           View all videos
         </NuxtLink>
       </div>
@@ -60,11 +53,8 @@
 
     <template v-else>
       <div class="flex flex-col sm:flex-row gap-4 flex-wrap">
-        <RevenueScoreHero
-          :total-revenue-loss="props.totalRevenueLoss"
-          :dead-links-count="props.deadLinksCount"
-          :has-link-results="props.linkResults.length > 0"
-        />
+        <RevenueScoreHero :total-revenue-loss="props.totalRevenueLoss" :dead-links-count="props.deadLinksCount"
+          :has-link-results="props.linkResults.length > 0" />
         <div class="flex gap-3 flex-wrap items-center">
           <div class="rounded-card px-3 py-2 bg-stat-bg border border-border-default">
             <span class="text-xs text-text-muted">Videos checked</span>
@@ -72,11 +62,15 @@
           </div>
           <div class="rounded-card px-3 py-2 bg-stat-bg border border-border-default">
             <span class="text-xs text-text-muted">Affected by dead links</span>
-            <p class="text-lg font-bold" :class="props.videosAffectedByDeadLinks > 0 ? 'text-error-text' : 'text-text-primary'">{{ props.videosAffectedByDeadLinks }}</p>
+            <p class="text-lg font-bold"
+              :class="props.videosAffectedByDeadLinks > 0 ? 'text-error-text' : 'text-text-primary'">{{
+                props.videosAffectedByDeadLinks }}</p>
           </div>
           <div class="rounded-card px-3 py-2 bg-stat-bg border border-border-default">
             <span class="text-xs text-text-muted">Affected by comments</span>
-            <p class="text-lg font-bold" :class="props.videosAffectedByComments > 0 ? 'text-alert-text' : 'text-text-primary'">{{ props.videosAffectedByComments }}</p>
+            <p class="text-lg font-bold"
+              :class="props.videosAffectedByComments > 0 ? 'text-alert-text' : 'text-text-primary'">{{
+                props.videosAffectedByComments }}</p>
           </div>
         </div>
       </div>
@@ -85,17 +79,18 @@
         <div class="lg:col-span-2 space-y-4">
           <DeadLinkWatchdog :items="props.deadLinksWithRevenue" />
 
-          <div v-if="(props.topVideosByRevenueLoss?.length ?? 0) > 0" class="rounded-card p-6 bg-card-bg border border-border-default">
+          <div v-if="(props.topVideosByRevenueLoss?.length ?? 0) > 0"
+            class="rounded-card p-6 bg-card-bg border border-border-default">
             <h3 class="font-bold text-text-primary mb-3">Top videos by revenue loss</h3>
             <ul class="space-y-2">
-              <li v-for="v in props.topVideosByRevenueLoss!.slice(0, 5)" :key="v.videoId" class="flex items-center justify-between gap-2">
-                <NuxtLink
-                  :to="`/videos/${v.videoId}`"
-                  class="text-sm text-text-primary hover:text-hover-link truncate flex-1 min-w-0"
-                >
+              <li v-for="v in props.topVideosByRevenueLoss!.slice(0, 5)" :key="v.videoId"
+                class="flex items-center justify-between gap-2">
+                <NuxtLink :to="`/videos/${v.videoId}`"
+                  class="text-sm text-text-primary hover:text-hover-link truncate flex-1 min-w-0">
                   {{ v.title }}
                 </NuxtLink>
-                <span class="text-sm font-medium text-error-text flex-shrink-0">~${{ Math.round(v.revenueLoss) }}/mo</span>
+                <span class="text-sm font-medium text-error-text flex-shrink-0">~${{ Math.round(v.revenueLoss)
+                  }}/mo</span>
               </li>
             </ul>
           </div>
@@ -110,10 +105,8 @@
             class="rounded-card p-6 bg-card-bg border border-border-default">
             <p class="text-text-muted mb-2">Run a link check to see which links are dead or redirected.</p>
             <slot name="check-links-cta">
-              <NuxtLink
-                :to="props.viewVideosHref"
-                class="inline-block px-4 py-2 rounded-button text-sm font-medium bg-btn-from text-white hover:opacity-90"
-              >
+              <NuxtLink :to="props.viewVideosHref"
+                class="inline-block px-4 py-2 rounded-button text-sm font-medium bg-btn-from text-white hover:opacity-90">
                 Check links in All Videos
               </NuxtLink>
             </slot>
@@ -121,10 +114,11 @@
         </div>
 
         <div class="lg:col-span-1 space-y-4">
-          <ChannelScoreWidget
-            :channel-handle="props.channelHandleForScore"
-            :detail-href="props.channelScoreDetailHref ?? '/channel-score'"
-          />
+          <ChannelScoreWidget :channel-handle="props.channelHandleForScore"
+            :detail-href="props.channelScoreDetailHref ?? '/channel-score'" />
+          <HighIntentWidget :comments-status="props.commentsStatus" :high-intent-comments="props.highIntentComments"
+            :has-videos="props.hasVideos" :is-fetching-comments="props.isFetchingComments"
+            :view-comments-href="props.viewCommentsHref" :on-fetch-comments="props.onFetchComments" />
           <div class="rounded-card p-4 bg-card-bg border-2 border-border-default">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xl">📧</span>
@@ -139,21 +133,11 @@
             <p v-else class="text-sm text-text-muted mb-2">
               Not enabled
             </p>
-            <NuxtLink
-              to="/settings"
-              class="inline-flex items-center gap-2 px-3 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-            >
+            <NuxtLink to="/settings"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention">
               Manage in Settings →
             </NuxtLink>
           </div>
-          <HighIntentWidget
-            :comments-status="props.commentsStatus"
-            :high-intent-comments="props.highIntentComments"
-            :has-videos="props.hasVideos"
-            :is-fetching-comments="props.isFetchingComments"
-            :view-comments-href="props.viewCommentsHref"
-            :on-fetch-comments="props.onFetchComments"
-          />
         </div>
       </div>
     </template>
