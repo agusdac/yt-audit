@@ -156,7 +156,7 @@ watch(
 )
 
 const pageTitle = computed(() =>
-  data.value?.video?.title ? `${data.value.video.title} | YT-Audit` : 'Video | YT-Audit'
+  data.value?.video?.title ? `${data.value.video.title} | UpScrub` : 'Video | UpScrub'
 )
 useSeoMeta({ title: pageTitle })
 </script>

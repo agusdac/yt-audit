@@ -91,7 +91,7 @@ definePageMeta({
   middleware: 'auth',
   layout: 'creator'
 })
-useSeoMeta({ title: 'Dashboard | YT-Audit' })
+useSeoMeta({ title: 'Dashboard | UpScrub' })
 
 const store = useCreatorWorkspaceStore()
 

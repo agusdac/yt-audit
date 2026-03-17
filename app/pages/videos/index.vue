@@ -80,7 +80,7 @@ definePageMeta({
   middleware: 'auth',
   layout: 'creator'
 })
-useSeoMeta({ title: 'All Videos | YT-Audit' })
+useSeoMeta({ title: 'All Videos | UpScrub' })
 
 const route = useRoute()
 const store = useCreatorWorkspaceStore()

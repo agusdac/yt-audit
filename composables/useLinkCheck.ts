@@ -153,7 +153,7 @@ export function useLinkCheck(
       'url,status,category,redirected,codeMayBeInvalid,videoId',
       ...rows.map(r => `"${r.url.replace(/"/g, '""')}",${r.status},${r.category},${r.redirected},${r.codeMayBeInvalid},${r.videoId}`)
     ].join('\n')
-    downloadFile(csv, `yt-audit-links-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8')
+    downloadFile(csv, `upscrub-links-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8')
   }
 
   const exportJson = () => {
@@ -161,7 +161,7 @@ export function useLinkCheck(
       exportedAt: new Date().toISOString(),
       linkResults: linkResults.value
     }
-    downloadFile(JSON.stringify(data, null, 2), `yt-audit-links-${new Date().toISOString().slice(0, 10)}.json`, 'application/json')
+    downloadFile(JSON.stringify(data, null, 2), `upscrub-links-${new Date().toISOString().slice(0, 10)}.json`, 'application/json')
   }
 
   const clearCache = async () => {

@@ -1,4 +1,4 @@
-const THEME_KEY = 'yt-audit-theme'
+const THEME_KEY = 'upscrub-theme'
 
 export function useTheme() {
   const theme = useState<'dark' | 'light'>('theme', () => 'dark')

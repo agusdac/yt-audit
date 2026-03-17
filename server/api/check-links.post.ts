@@ -24,7 +24,7 @@ const checkUrl = async (url: string): Promise<{ status: number; finalUrl: string
       method: 'HEAD',
       redirect: 'follow',
       signal: controller.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YTAudit/1.0; +https://github.com/yt-audit)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; UpScrub/1.0; +https://github.com/yt-audit)' }
     })
 
     clearTimeout(timeout)
@@ -36,7 +36,7 @@ const checkUrl = async (url: string): Promise<{ status: number; finalUrl: string
         method: 'GET',
         redirect: 'follow',
         signal: c2.signal,
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YTAudit/1.0; +https://github.com/yt-audit)' }
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; UpScrub/1.0; +https://github.com/yt-audit)' }
       })
       clearTimeout(t2)
       const finalUrl = res2.url

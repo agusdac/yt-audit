@@ -8,7 +8,7 @@
           <span
             class="text-lg font-bold bg-gradient-to-r from-title-from via-title-via to-title-to bg-clip-text text-transparent truncate"
             :class="{ 'sr-only': sidebarCollapsed }">
-            YT-Audit
+            UpScrub
           </span>
         </NuxtLink>
         <button type="button"
@@ -152,7 +152,7 @@
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 import { useTheme } from '~~/composables/useTheme'
 
-const SIDEBAR_COLLAPSED_KEY = 'yt-audit-sidebar-collapsed'
+const SIDEBAR_COLLAPSED_KEY = 'upscrub-sidebar-collapsed'
 
 const store = useCreatorWorkspaceStore()
 const { theme, initTheme, toggleTheme } = useTheme()

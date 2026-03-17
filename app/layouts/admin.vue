@@ -8,7 +8,7 @@
           <span
             class="text-lg font-bold bg-gradient-to-r from-title-from via-title-via to-title-to bg-clip-text text-transparent truncate"
             :class="{ 'sr-only': sidebarCollapsed }">
-            YT-Audit Admin
+            UpScrub Admin
           </span>
         </NuxtLink>
         <button type="button"
@@ -122,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-const SIDEBAR_COLLAPSED_KEY = 'yt-audit-admin-sidebar-collapsed'
+const SIDEBAR_COLLAPSED_KEY = 'upscrub-admin-sidebar-collapsed'
 
 const sidebarCollapsed = ref(false)
 

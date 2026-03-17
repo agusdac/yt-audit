@@ -20,8 +20,8 @@ export async function sendDeadLinksAlert(
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey || !to?.trim()) return false
 
-  const from = process.env.RESEND_FROM || 'YT-Audit <onboarding@resend.dev>'
-  const subject = `YT-Audit: ${options.deadLinksCount} dead link${options.deadLinksCount === 1 ? '' : 's'} found`
+  const from = process.env.RESEND_FROM || 'UpScrub <onboarding@resend.dev>'
+  const subject = `UpScrub: ${options.deadLinksCount} dead link${options.deadLinksCount === 1 ? '' : 's'} found`
   const siteUrl = (options.siteUrl || process.env.NUXT_PUBLIC_SITE_URL || '').replace(/\/$/, '')
   const dashboardUrl = siteUrl ? `${siteUrl}/dashboard` : ''
 
@@ -44,7 +44,7 @@ export async function sendDeadLinksAlert(
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6">
   <div style="max-width:600px;margin:0 auto;padding:24px">
     <div style="margin-bottom:24px">
-      <h1 style="margin:0;font-size:24px;font-weight:700;color:#18181b;background:linear-gradient(90deg,#f43f5e,#f59e0b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">YT-Audit</h1>
+      <h1 style="margin:0;font-size:24px;font-weight:700;color:#18181b;background:linear-gradient(90deg,#f43f5e,#f59e0b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">UpScrub</h1>
     </div>
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.08);border:1px solid #e5e7eb">
       <h2 style="margin:0 0 16px;font-size:18px;font-weight:600;color:#b91c1c">Dead links detected</h2>
@@ -63,7 +63,7 @@ export async function sendDeadLinksAlert(
       <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">Your dashboard has the full list and links to fix them in YouTube Studio.</p>
       ` : ''}
     </div>
-    <p style="margin-top:16px;font-size:12px;color:#9ca3af">Your scheduled audit report · YT-Audit</p>
+    <p style="margin-top:16px;font-size:12px;color:#9ca3af">Your scheduled audit report · UpScrub</p>
   </div>
 </body>
 </html>

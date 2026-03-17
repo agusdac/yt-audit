@@ -88,6 +88,10 @@
   --color-filter-text-active: #fde68a;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-feature-settings: "ss01" 1, "ss02" 1;
   -webkit-font-smoothing: antialiased;

@@ -131,7 +131,7 @@ definePageMeta({
   middleware: 'auth',
   layout: 'creator'
 })
-useSeoMeta({ title: 'High-Intent Comments | YT-Audit' })
+useSeoMeta({ title: 'High-Intent Comments | UpScrub' })
 
 const store = useCreatorWorkspaceStore()
 const showFilter = ref<'unanswered' | 'all'>('unanswered')
