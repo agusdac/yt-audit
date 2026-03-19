@@ -55,6 +55,15 @@
           >
             All ({{ store.highIntentComments.length }})
           </button>
+          <button
+            v-if="tier.tier.value === 'pro' && selectedReplyableCount > 0"
+            type="button"
+            class="px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from/20 to-btn-to/20 border border-btn-from/40 text-btn-from hover:opacity-90"
+            :disabled="replying"
+            @click="replyModalOpen = true"
+          >
+            Reply to selected ({{ selectedCount }})
+          </button>
           </div>
           <button
             type="button"
@@ -71,6 +80,17 @@
           class="rounded-card p-4 bg-card-bg border border-border-default flex flex-col sm:flex-row sm:items-center gap-3"
           :class="{ 'opacity-60': isAnswered(c.id) }"
         >
+          <div v-if="tier.tier.value === 'pro'" class="flex-shrink-0">
+            <input
+              :id="`sel-${c.id}`"
+              type="checkbox"
+              :checked="selectedIds.has(c.id)"
+              :disabled="c.canReply === false"
+              class="rounded border-border-default"
+              :title="c.canReply === false ? 'Replies disabled for this comment' : undefined"
+              @change="toggleSelect(c.id)"
+            />
+          </div>
           <div class="min-w-0 flex-1">
             <p class="text-sm text-text-primary">{{ c.text }}</p>
             <p class="text-xs text-text-muted mt-1">
@@ -86,6 +106,14 @@
             >
               {{ isAnswered(c.id) ? 'Answered' : 'Mark as answered' }}
             </button>
+            <button
+              v-if="tier.tier.value === 'pro'"
+              type="button"
+              class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention"
+              @click="store.markCommentAsWrong(c.id, true)"
+            >
+              Mark as wrong
+            </button>
             <a
               :href="c.permalink"
               target="_blank"
@@ -96,6 +124,49 @@
             </a>
           </div>
         </div>
+        <Teleport to="body">
+          <div v-if="replyModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="replyModalOpen = false">
+            <div class="rounded-card p-6 bg-card-bg border border-border-default max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <h3 class="text-lg font-semibold text-text-primary mb-3">Reply to {{ selectedCount }} comment(s)</h3>
+              <p class="text-sm text-text-muted mb-3">Use <code class="px-1 py-0.5 rounded bg-card-bg-attention">&#123;&#123;author&#125;&#125;</code> to insert the commenter's name.</p>
+              <textarea
+                v-model="replyTemplate"
+                rows="4"
+                placeholder="Thanks {{author}}! Here's the link: ..."
+                class="w-full px-4 py-2 rounded-button bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted mb-4"
+              />
+              <div v-if="replyError" class="rounded-card px-4 py-3 bg-error-bg border border-error-border text-error-text mb-3 flex flex-wrap items-center gap-3">
+                <span class="flex-1 min-w-0">{{ replyError }}</span>
+                <NuxtLink
+                  v-if="isReplyProRequiredError"
+                  to="/settings"
+                  class="px-3 py-1 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to"
+                >
+                  Upgrade to Pro
+                </NuxtLink>
+              </div>
+              <div v-if="replySuccess" class="text-sm text-merch-link mb-3">{{ replySuccess }}</div>
+              <div class="flex gap-3">
+                <button
+                  type="button"
+                  class="px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to hover:from-btn-hover-from hover:to-btn-hover-to disabled:opacity-60"
+                  :disabled="replying || !replyTemplate.trim()"
+                  @click="sendBulkReplies"
+                >
+                  {{ replying ? 'Replying...' : 'Send' }}
+                </button>
+                <button
+                  type="button"
+                  class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+                  :disabled="replying"
+                  @click="replyModalOpen = false"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </Teleport>
       </div>
 
       <div v-else-if="store.hasVideos" class="rounded-card p-8 bg-card-bg border border-border-default text-center">
@@ -126,6 +197,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
+import { useTier } from '~~/composables/useTier'
+import type { HighIntentComment } from '~~/stores/creatorWorkspace'
 
 definePageMeta({
   middleware: 'auth',
@@ -134,18 +207,82 @@ definePageMeta({
 useSeoMeta({ title: 'High-Intent Comments | UpScrub' })
 
 const store = useCreatorWorkspaceStore()
+const tier = useTier()
 const showFilter = ref<'unanswered' | 'all'>('unanswered')
+const selectedIds = ref<Set<string>>(new Set())
+const replyModalOpen = ref(false)
+const replyTemplate = ref('Thanks {{author}}! Here\'s the link: ')
+const replyError = ref<string | null>(null)
+const replySuccess = ref<string | null>(null)
+const replying = ref(false)
 
 const isAnswered = (commentId: string) => store.answeredCommentIds.includes(commentId)
-
-const unansweredCount = computed(() =>
-  store.highIntentComments.filter((c) => !store.answeredCommentIds.includes(c.id)).length
-)
 
 const displayedComments = computed(() => {
   if (showFilter.value === 'all') return store.highIntentComments
   return store.highIntentComments.filter((c) => !store.answeredCommentIds.includes(c.id))
 })
+
+const unansweredCount = computed(() =>
+  store.highIntentComments.filter((c) => !store.answeredCommentIds.includes(c.id)).length
+)
+
+const selectedCount = computed(() => selectedIds.value.size)
+
+const selectedReplyableCount = computed(() => {
+  let n = 0
+  for (const id of selectedIds.value) {
+    const c = store.highIntentComments.find((x) => x.id === id)
+    if (c && c.canReply !== false) n++
+  }
+  return n
+})
+
+const toggleSelect = (id: string) => {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedIds.value = next
+}
+
+const isReplyProRequiredError = computed(() => {
+  const msg = replyError.value?.toLowerCase() ?? ''
+  return msg.includes('pro') && (msg.includes('feature') || msg.includes('upgrade'))
+})
+
+const selectedCommentsForReply = computed((): HighIntentComment[] => {
+  const list: HighIntentComment[] = []
+  for (const id of selectedIds.value) {
+    const c = store.highIntentComments.find((x) => x.id === id)
+    if (c && c.canReply !== false) list.push(c)
+  }
+  return list
+})
+
+const sendBulkReplies = async () => {
+  const comments = selectedCommentsForReply.value
+  if (comments.length === 0 || !replyTemplate.value.trim()) return
+  replyError.value = null
+  replySuccess.value = null
+  replying.value = true
+  try {
+    const res = await store.replyToCommentsBulk(
+      comments.map((c) => ({ id: c.id, authorDisplayName: c.authorDisplayName, canReply: c.canReply })),
+      replyTemplate.value.trim()
+    )
+    replySuccess.value = `Replied to ${res.replied} comment(s).`
+    selectedIds.value = new Set()
+    setTimeout(() => {
+      replyModalOpen.value = false
+      replySuccess.value = null
+    }, 1500)
+  } catch (e: unknown) {
+    const err = e as { data?: { message?: string }; message?: string }
+    replyError.value = err?.data?.message ?? err?.message ?? 'Failed to send replies'
+  } finally {
+    replying.value = false
+  }
+}
 
 function escapeCsvValue(text: string): string {
   const escaped = text.replace(/"/g, '""')

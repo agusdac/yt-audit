@@ -48,6 +48,9 @@
 </template>
 
 <script setup lang="ts">
+const config = useRuntimeConfig()
+const proPrice = config.public?.proPriceDisplay ?? '$19/mo'
+
 const tiers = [
   {
     name: 'Free',
@@ -65,7 +68,7 @@ const tiers = [
   },
   {
     name: 'Pro',
-    price: 'TBD / month',
+    price: proPrice,
     description: 'For creators ready to protect their revenue.',
     features: [
       'Unlimited audits',

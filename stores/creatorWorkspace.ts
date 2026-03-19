@@ -11,6 +11,7 @@ export interface HighIntentComment {
   authorDisplayName: string
   publishedAt: string
   permalink: string
+  canReply?: boolean
 }
 
 type MeData = {
@@ -24,12 +25,14 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
     linkResults: [] as LinkCheckResult[],
     highIntentComments: [] as HighIntentComment[],
     answeredCommentIds: [] as string[],
+    wrongCommentIds: [] as string[],
     hasCommentsLoaded: false,
     lastAuditAt: null as Date | null,
     isLoading: false,
     isCheckingLinks: false,
     isFetchingComments: false,
     error: null as string | null,
+    errorCode: null as string | null,
     me: null as MeData | null,
     creatorSettings: null as { cpmSponsor?: number; ctrAffiliate?: number; convAffiliate?: number; avgCommission?: number; sponsorDomains?: string[]; scheduledAuditEnabled?: boolean; scheduledAuditFrequency?: 'weekly' | 'monthly' } | null
   }),
@@ -56,6 +59,7 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
 
       this.isLoading = true
       this.error = null
+      this.errorCode = null
       this.videos = []
       this.linkResults = []
       this.highIntentComments = []
@@ -77,8 +81,9 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
         this.hasCommentsLoaded = true
         this.lastAuditAt = new Date()
       } catch (e: unknown) {
-        const err = e as { data?: { message?: string }; message?: string }
+        const err = e as { data?: { message?: string; code?: string }; message?: string }
         this.error = err?.data?.message ?? err?.message ?? 'Failed to run audit.'
+        this.errorCode = err?.data?.code ?? null
       } finally {
         this.isLoading = false
       }
@@ -138,17 +143,20 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
 
     clearError() {
       this.error = null
+      this.errorCode = null
     },
 
     async loadCommentsFromCache() {
       try {
-        const res = await $fetch<{ highIntentComments: HighIntentComment[]; answeredCommentIds?: string[] }>('/api/comments')
+        const res = await $fetch<{ highIntentComments: HighIntentComment[]; answeredCommentIds?: string[]; wrongCommentIds?: string[] }>('/api/comments')
         this.highIntentComments = res.highIntentComments ?? []
         this.answeredCommentIds = res.answeredCommentIds ?? []
+        this.wrongCommentIds = res.wrongCommentIds ?? []
         this.hasCommentsLoaded = true
       } catch {
         this.highIntentComments = []
         this.answeredCommentIds = []
+        this.wrongCommentIds = []
       }
     },
 
@@ -158,7 +166,7 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       this.isFetchingComments = true
       this.error = null
       try {
-        const res = await $fetch<{ highIntentComments: HighIntentComment[]; answeredCommentIds?: string[] }>('/api/comments.fetch', {
+        const res = await $fetch<{ highIntentComments: HighIntentComment[]; answeredCommentIds?: string[]; wrongCommentIds?: string[] }>('/api/comments.fetch', {
           method: 'POST',
           body: {
             videos: this.videos.map((v) => ({ id: v.id, title: v.title }))
@@ -166,6 +174,7 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
         })
         this.highIntentComments = res.highIntentComments ?? []
         this.answeredCommentIds = res.answeredCommentIds ?? []
+        this.wrongCommentIds = res.wrongCommentIds ?? []
         this.hasCommentsLoaded = true
       } catch (e: unknown) {
         const err = e as { data?: { message?: string }; message?: string }
@@ -182,6 +191,34 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
           body: { commentId, answered }
         })
         this.answeredCommentIds = res.answeredCommentIds ?? []
+      } catch {
+        // ignore
+      }
+    },
+
+    async replyToCommentsBulk(comments: Array<{ id: string; authorDisplayName: string; canReply?: boolean }>, template: string) {
+      const res = await $fetch<{ replied: number; repliedIds: string[] }>('/api/comments/reply-bulk', {
+        method: 'POST',
+        body: { comments, template }
+      })
+      for (const id of res.repliedIds ?? []) {
+        if (!this.answeredCommentIds.includes(id)) this.answeredCommentIds.push(id)
+      }
+      return res
+    },
+
+    async markCommentAsWrong(commentId: string, wrong: boolean) {
+      try {
+        await $fetch('/api/comments/mark-wrong', {
+          method: 'POST',
+          body: { commentId, wrong }
+        })
+        if (wrong) {
+          this.highIntentComments = this.highIntentComments.filter((c) => c.id !== commentId)
+          if (!this.wrongCommentIds.includes(commentId)) this.wrongCommentIds.push(commentId)
+        } else {
+          this.wrongCommentIds = this.wrongCommentIds.filter((id) => id !== commentId)
+        }
       } catch {
         // ignore
       }

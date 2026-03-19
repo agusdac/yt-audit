@@ -1,12 +1,21 @@
 <template>
   <div class="space-y-6">
     <div v-if="props.error"
-      class="rounded-card px-4 py-3 flex items-center gap-3 bg-error-bg border border-error-border text-error-text">
+      class="rounded-card px-4 py-3 flex flex-wrap items-center gap-3 bg-error-bg border border-error-border text-error-text">
       <span class="text-2xl">&#9888;</span>
-      <span>{{ props.error }}</span>
-      <button type="button" class="ml-auto px-3 py-1 rounded-button text-sm" @click="props.onClearError?.()">
-        Dismiss
-      </button>
+      <span class="flex-1 min-w-0">{{ props.error }}</span>
+      <div class="flex items-center gap-2">
+        <NuxtLink
+          v-if="props.errorCode === 'AUDIT_LIMIT'"
+          to="/settings"
+          class="px-3 py-1 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to"
+        >
+          Upgrade to Pro
+        </NuxtLink>
+        <button type="button" class="px-3 py-1 rounded-button text-sm" @click="props.onClearError?.()">
+          Dismiss
+        </button>
+      </div>
     </div>
 
     <div class="flex items-center justify-between flex-wrap gap-4">
@@ -53,8 +62,17 @@
 
     <template v-else>
       <div class="flex flex-col sm:flex-row gap-4 flex-wrap">
-        <RevenueScoreHero :total-revenue-loss="props.totalRevenueLoss" :dead-links-count="props.deadLinksCount"
+        <RevenueScoreHero v-if="props.tier === 'pro'"
+          :total-revenue-loss="props.totalRevenueLoss" :dead-links-count="props.deadLinksCount"
           :has-link-results="props.linkResults.length > 0" />
+        <div v-else
+          class="rounded-card p-6 bg-card-bg-attention border border-border-default flex-1 min-w-0">
+          <p class="text-sm text-text-muted mb-3">Revenue estimates and top videos by revenue loss are Pro features.</p>
+          <NuxtLink to="/settings"
+            class="inline-flex px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to">
+            Upgrade to Pro
+          </NuxtLink>
+        </div>
         <div class="flex gap-3 flex-wrap items-center">
           <div class="rounded-card px-3 py-2 bg-stat-bg border border-border-default">
             <span class="text-xs text-text-muted">Videos checked</span>
@@ -77,9 +95,9 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-4">
-          <DeadLinkWatchdog :items="props.deadLinksWithRevenue" />
+          <DeadLinkWatchdog :items="props.deadLinksWithRevenue" :tier="props.tier" />
 
-          <div v-if="(props.topVideosByRevenueLoss?.length ?? 0) > 0"
+          <div v-if="props.tier === 'pro' && (props.topVideosByRevenueLoss?.length ?? 0) > 0"
             class="rounded-card p-6 bg-card-bg border border-border-default">
             <h3 class="font-bold text-text-primary mb-3">Top videos by revenue loss</h3>
             <ul class="space-y-2">
@@ -169,10 +187,12 @@ const props = withDefaults(
     lastAuditAt: Date | null
     isCacheStale?: boolean
     error: string | null
+    errorCode?: string | null
     viewVideosHref: string
     viewCommentsHref: string
     scheduledAuditEnabled?: boolean
     scheduledAuditFrequency?: 'weekly' | 'monthly'
+    tier?: 'free' | 'pro'
     maxVisibleDeadLinks?: number
     channelHandleForScore?: string
     channelScoreDetailHref?: string

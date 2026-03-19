@@ -132,6 +132,45 @@ export const getChannelDetails = async (
   }
 }
 
+export interface VideoSnippet {
+  title: string
+  description: string
+  categoryId?: string
+  tags?: string[]
+  [key: string]: unknown
+}
+
+export const getVideoSnippet = async (
+  videoId: string,
+  accessToken: string
+): Promise<VideoSnippet> => {
+  const data = await $fetch<{ items?: Array<{ snippet: VideoSnippet }> }>(
+    'https://www.googleapis.com/youtube/v3/videos',
+    {
+      query: { part: 'snippet', id: videoId },
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }
+  )
+  if (!data.items?.length) {
+    throw createError({ statusCode: 404, statusMessage: `Video ${videoId} not found` })
+  }
+  return data.items[0]!.snippet
+}
+
+export const updateVideoDescription = async (
+  videoId: string,
+  description: string,
+  accessToken: string
+): Promise<void> => {
+  const snippet = await getVideoSnippet(videoId, accessToken)
+  await $fetch('https://www.googleapis.com/youtube/v3/videos', {
+    method: 'PUT',
+    query: { part: 'snippet' },
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: { id: videoId, snippet: { ...snippet, description } }
+  })
+}
+
 export const getChannelVideoIds = async (
   handle: string,
   ytApiKey: string,

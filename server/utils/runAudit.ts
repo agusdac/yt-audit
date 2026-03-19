@@ -8,11 +8,13 @@ const normalizeHandle = (h: string): string =>
 
 export async function runAudit(
   handles: string[],
-  ytApiKey: string
+  ytApiKey: string,
+  maxVideos?: number
 ): Promise<{ count: number; videos: VideoDetails[] }> {
   const uniqueHandles = [...new Set(handles.map(normalizeHandle).filter(Boolean))]
   const config = useRuntimeConfig()
   const VIDEO_DETAILS_CONCURRENCY = 4
+  const limit = maxVideos ?? config.maxVideosToFetch ?? 200
 
   const handleResults = await Promise.all(
     uniqueHandles.map(async (handle) => {
@@ -25,7 +27,7 @@ export async function runAudit(
         const data = await getPlaylistVideos(playlistId, ytApiKey, nextPageToken)
         allVideoIds.push(...data.items.map(i => i.contentDetails.videoId))
         nextPageToken = data.nextPageToken
-        if (allVideoIds.length >= config.maxVideosToFetch) break
+        if (allVideoIds.length >= limit) break
       } while (nextPageToken)
 
       const chunks: string[] = []
@@ -76,12 +78,16 @@ export async function runAudit(
     v.links.sponsors.length > 0 || v.links.affiliates.length > 0 ||
     v.links.merch.length > 0 || v.links.socialWithRevenue.length > 0 || v.links.other.length > 0
 
-  const videos = [...seen.values()].sort((a, b) => {
+  let videos = [...seen.values()].sort((a, b) => {
     const aHas = hasMonetizationLinks(a) ? 1 : 0
     const bHas = hasMonetizationLinks(b) ? 1 : 0
     if (aHas !== bHas) return bHas - aHas
     return b.viewCount - a.viewCount
   })
+
+  if (maxVideos !== undefined && videos.length > maxVideos) {
+    videos = videos.slice(0, maxVideos)
+  }
 
   return { count: videos.length, videos }
 }

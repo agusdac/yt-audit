@@ -29,7 +29,7 @@ async function fetchYouTubeChannels(accessToken: string): Promise<Array<{ channe
 
 export default defineOAuthGoogleEventHandler({
   config: {
-    scope: ['email', 'profile', 'openid', 'https://www.googleapis.com/auth/youtube.readonly'],
+    scope: ['email', 'profile', 'openid', 'https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/youtube.force-ssl'],
     authorizationParams: { access_type: 'offline', prompt: 'consent' }
   },
   async onSuccess(event, { user, tokens }) {

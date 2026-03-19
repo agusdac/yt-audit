@@ -23,6 +23,9 @@ export default defineNuxtConfig({
       autoRunAuditOnLogin: process.env.AUTO_RUN_AUDIT_ON_LOGIN !== 'false',
       auditCacheTtlHours: Number(process.env.AUDIT_CACHE_TTL_HOURS) || 24,
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || '',
+      supportEmail: process.env.SUPPORT_EMAIL || 'support@upscrub.com',
+      supportUrl: process.env.SUPPORT_URL || '',
+      proPriceDisplay: process.env.PRO_PRICE_DISPLAY || '$19/mo',
     },
     oauth: {
       google: {
@@ -45,5 +48,12 @@ export default defineNuxtConfig({
     commentsFetchMaxVideos: Number(process.env.COMMENTS_FETCH_MAX_VIDEOS) || 50,
     detectIntentViaHf: process.env.DETECT_INTENT_VIA_HF === 'true',
     hfToken: process.env.HF_TOKEN || '',
+    lemonSqueezyApiKey: process.env.LEMON_SQUEEZY_API_KEY || '',
+    lemonSqueezySigningSecret: process.env.LEMON_SQUEEZY_SIGNING_SECRET || '',
+    lemonSqueezyStoreId: process.env.LEMON_SQUEEZY_STORE_ID || '',
+    lemonSqueezyProVariantId: process.env.LEMON_SQUEEZY_PRO_VARIANT_ID || '',
+    lemonSqueezyBillingUrl: process.env.LEMON_SQUEEZY_BILLING_URL || '',
+    bulkLinksRateLimitPerMin: Number(process.env.BULK_LINKS_RATE_LIMIT) || 5,
+    replyBulkRateLimitPerMin: Number(process.env.REPLY_BULK_RATE_LIMIT) || 10,
   },
 });

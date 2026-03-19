@@ -8,9 +8,11 @@ export interface YouTubeComment {
   authorDisplayName: string
   publishedAt: string
   permalink: string
+  canReply?: boolean
 }
 
 interface CommentThreadSnippet {
+  canReply?: boolean
   topLevelComment?: {
     id?: string
     snippet?: {
@@ -138,7 +140,8 @@ export async function fetchCommentsForVideo(
         text,
         authorDisplayName: top.authorDisplayName ?? '',
         publishedAt: top.publishedAt ?? '',
-        permalink: `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`
+        permalink: `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`,
+        canReply: item.snippet?.canReply ?? true
       })
     }
 
@@ -147,6 +150,19 @@ export async function fetchCommentsForVideo(
   }
 
   return results
+}
+
+export const replyToComment = async (
+  parentId: string,
+  text: string,
+  accessToken: string
+): Promise<void> => {
+  await $fetch('https://www.googleapis.com/youtube/v3/comments', {
+    method: 'POST',
+    query: { part: 'snippet' },
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: { snippet: { parentId, textOriginal: text } }
+  })
 }
 
 /** Fetch raw comments (no purchase-intent filter) for a video. Used for admin export. */
@@ -189,7 +205,8 @@ export async function fetchRawCommentsForVideo(
         text,
         authorDisplayName: top.authorDisplayName ?? '',
         publishedAt: top.publishedAt ?? '',
-        permalink: `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`
+        permalink: `https://www.youtube.com/watch?v=${videoId}&lc=${commentId}`,
+        canReply: item.snippet?.canReply ?? true
       })
     }
 

@@ -2,6 +2,7 @@ import { getLinkedChannels } from '~~/server/service/userService'
 import { getCachedComments, setCachedComments } from '~~/server/service/commentCacheService'
 import { fetchCommentsForVideo } from '~~/server/service/commentService'
 import { getAnsweredCommentIds } from '~~/server/service/answeredCommentsService'
+import { getWrongCommentIds } from '~~/server/service/wrongCommentsService'
 import type { YouTubeComment } from '~~/server/service/commentService'
 
 export default defineEventHandler(async (event) => {
@@ -27,9 +28,15 @@ export default defineEventHandler(async (event) => {
   const handles = channels.map((c) => c.handle)
 
   const cached = handles.length > 0 ? await getCachedComments(userId, handles) : null
-  const answeredCommentIds = await getAnsweredCommentIds(userId)
+  const [answeredCommentIds, wrongCommentIds] = await Promise.all([
+    getAnsweredCommentIds(userId),
+    getWrongCommentIds(userId)
+  ])
+  const wrongSet = new Set(wrongCommentIds)
+
   if (cached !== null) {
-    return { highIntentComments: cached, answeredCommentIds }
+    const filtered = cached.filter((c) => !wrongSet.has(c.id))
+    return { highIntentComments: filtered, answeredCommentIds, wrongCommentIds }
   }
 
   const videosToFetch = body.videos.slice(0, maxVideos)
@@ -51,5 +58,6 @@ export default defineEventHandler(async (event) => {
     await setCachedComments(userId, handles, allComments)
   }
 
-  return { highIntentComments: allComments, answeredCommentIds }
+  const filtered = allComments.filter((c) => !wrongSet.has(c.id))
+  return { highIntentComments: filtered, answeredCommentIds, wrongCommentIds }
 })

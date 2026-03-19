@@ -9,6 +9,8 @@ import * as linkedChannelsSchema from './schemas/linkedChannels'
 import * as answeredCommentsSchema from './schemas/answeredComments'
 import * as creatorSettingsSchema from './schemas/creatorSettings'
 import * as scoreCacheSchema from './schemas/scoreCache'
+import * as subscriptionsSchema from './schemas/subscriptions'
+import * as wrongCommentsSchema from './schemas/wrongComments'
 
 const schema = {
   ...linkCacheSchema,
@@ -19,7 +21,9 @@ const schema = {
   ...linkedChannelsSchema,
   ...answeredCommentsSchema,
   ...creatorSettingsSchema,
-  ...scoreCacheSchema
+  ...scoreCacheSchema,
+  ...subscriptionsSchema,
+  ...wrongCommentsSchema
 }
 
 const pool = new Pool({

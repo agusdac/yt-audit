@@ -9,6 +9,7 @@ import { runLinkCheck } from '~~/server/service/linkCheckService'
 import { sendDeadLinksAlert } from '~~/server/service/emailService'
 import { getCreatorSettings } from '~~/server/service/creatorSettingsService'
 import { saveAuditHistoryWithLinks } from '~~/server/service/auditHistoryService'
+import { getEffectiveTier } from '~~/server/service/tierService'
 
 export default defineTask({
   meta: {
@@ -26,6 +27,9 @@ export default defineTask({
     const results: Array<{ userId: string; email: string; channels: string[]; deadLinks: number; emailed: boolean }> = []
 
     for (const { userId } of due) {
+      const tier = await getEffectiveTier(userId)
+      if (tier !== 'pro') continue
+
       const user = await getUserById(userId)
       if (!user?.email) continue
 

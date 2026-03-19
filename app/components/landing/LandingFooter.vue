@@ -18,6 +18,17 @@
           <NuxtLink to="/privacy" class="text-sm text-text-muted hover:text-text-primary transition-colors">
             Privacy Policy
           </NuxtLink>
+          <NuxtLink to="/terms" class="text-sm text-text-muted hover:text-text-primary transition-colors">
+            Terms
+          </NuxtLink>
+          <a
+            :href="supportHref"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-sm text-text-muted hover:text-text-primary transition-colors"
+          >
+            Support
+          </a>
         </nav>
       </div>
       <p class="mt-6 text-center text-sm text-text-muted md:text-left">
@@ -26,3 +37,8 @@
     </div>
   </footer>
 </template>
+
+<script setup lang="ts">
+const config = useRuntimeConfig()
+const supportHref = config.public?.supportUrl || `mailto:${config.public?.supportEmail || 'support@upscrub.com'}`
+</script>

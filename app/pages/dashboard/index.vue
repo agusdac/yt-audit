@@ -1,14 +1,54 @@
 <template>
   <div class="p-6 max-w-5xl mx-auto">
     <div v-if="store.error && !store.hasVideos"
-      class="rounded-card px-4 py-3 flex items-center gap-3 bg-error-bg border border-error-border text-error-text mb-6">
+      class="rounded-card px-4 py-3 flex flex-wrap items-center gap-3 bg-error-bg border border-error-border text-error-text mb-6">
       <span class="text-2xl">&#9888;</span>
-      <span>{{ store.error }}</span>
-      <button type="button" class="ml-auto px-3 py-1 rounded-button text-sm" @click="store.clearError">Dismiss</button>
+      <span class="flex-1 min-w-0">{{ store.error }}</span>
+      <div class="flex items-center gap-2">
+        <NuxtLink
+          v-if="store.errorCode === 'AUDIT_LIMIT'"
+          to="/settings"
+          class="px-3 py-1 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to"
+        >
+          Upgrade to Pro
+        </NuxtLink>
+        <button type="button" class="px-3 py-1 rounded-button text-sm" @click="store.clearError">Dismiss</button>
+      </div>
     </div>
 
     <div v-if="!store.me?.linkedChannels?.length" class="rounded-card p-6 bg-card-bg border border-border-default">
       <p class="text-text-muted">No YouTube channels linked. Sign in with a Google account that has a YouTube channel.</p>
+    </div>
+
+    <div
+      v-else-if="showOnboardingModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+    >
+      <div class="rounded-card max-w-md w-full p-6 bg-card-bg border border-border-default shadow-lg">
+        <h2 id="onboarding-title" class="text-xl font-bold text-text-primary mb-2">Run your first audit</h2>
+        <p class="text-text-muted mb-6">
+          Scan your video descriptions for dead links, expired codes, and revenue impact. We'll show you exactly what to fix.
+        </p>
+        <div class="flex gap-3">
+          <button
+            type="button"
+            class="flex-1 px-4 py-2 rounded-button font-semibold bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to"
+            @click="dismissOnboardingAndRunAudit"
+          >
+            Run Audit
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-button font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
+            @click="dismissOnboarding"
+          >
+            Later
+          </button>
+        </div>
+      </div>
     </div>
 
     <template v-else>
@@ -67,6 +107,7 @@
           :last-audit-at="store.lastAuditAt"
           :is-cache-stale="isCacheStale"
           :error="store.error"
+          :error-code="store.errorCode"
           view-videos-href="/videos"
           view-comments-href="/comments"
           :on-run-audit="store.runAudit"
@@ -74,6 +115,7 @@
           :on-clear-error="store.clearError"
           :scheduled-audit-enabled="store.creatorSettings?.scheduledAuditEnabled"
           :scheduled-audit-frequency="store.creatorSettings?.scheduledAuditFrequency"
+          :tier="tier.tier.value"
           :channel-handle-for-score="store.me?.linkedChannels?.[0]?.handle"
           channel-score-detail-href="/channel-score"
         />
@@ -86,6 +128,7 @@
 import { computed, watch } from 'vue'
 import { getRevenueLossForLink, estimateMonthlyViews } from '~~/utils/revenue'
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
+import { useTier } from '~~/composables/useTier'
 
 definePageMeta({
   middleware: 'auth',
@@ -94,6 +137,23 @@ definePageMeta({
 useSeoMeta({ title: 'Dashboard | UpScrub' })
 
 const store = useCreatorWorkspaceStore()
+const tier = useTier()
+
+const ONBOARDING_KEY = 'upscrub_onboarding_seen'
+const showOnboardingModal = computed(() => {
+  if (!store.me?.linkedChannels?.length || store.hasVideos || store.isLoading || store.isCheckingLinks) return false
+  if (typeof window === 'undefined') return false
+  return !localStorage.getItem(ONBOARDING_KEY)
+})
+
+const dismissOnboarding = () => {
+  if (typeof window !== 'undefined') localStorage.setItem(ONBOARDING_KEY, '1')
+}
+
+const dismissOnboardingAndRunAudit = () => {
+  dismissOnboarding()
+  store.runAudit()
+}
 
 onMounted(() => {
   if (store.hasVideos) store.loadCommentsFromCache()

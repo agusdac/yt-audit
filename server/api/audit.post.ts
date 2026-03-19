@@ -4,10 +4,18 @@ import type { YouTubeComment } from '~~/server/service/commentService'
 import { runAudit } from '../utils/runAudit'
 import { getLinkedChannels } from '../service/userService'
 import { isAdminSessionValid } from '../utils/adminAuth'
+import {
+  getOrCreateSubscription,
+  canRunAudit,
+  getEffectiveTier,
+  getMaxVideosForTier,
+  incrementAuditsUsed
+} from '../service/tierService'
 import { getLinksToCheck } from '~~/utils/url'
 import { runLinkCheck } from '../service/linkCheckService'
 import { getCachedComments, setCachedComments } from '../service/commentCacheService'
 import { fetchCommentsForVideo } from '../service/commentService'
+import { getWrongCommentIds } from '../service/wrongCommentsService'
 
 const ADMIN_USER_ID = 'admin'
 
@@ -41,6 +49,18 @@ export default defineEventHandler(async (event) => {
     if (handles.length === 0) {
       throw createError({ statusCode: 400, message: 'No YouTube channels linked to your account' })
     }
+    if (!isAdmin) {
+      await getOrCreateSubscription(creatorUserId)
+      const allowed = await canRunAudit(creatorUserId)
+      if (!allowed) {
+        setResponseStatus(event, 403)
+        throw createError({
+          statusCode: 403,
+          message: 'Audit limit reached. Upgrade to Pro for unlimited audits.',
+          data: { code: 'AUDIT_LIMIT' }
+        })
+      }
+    }
   } else if (isAdmin || apiKey) {
     const body = await readBody<{ handles: string[] }>(event)
     if (!body?.handles || !Array.isArray(body.handles) || body.handles.length === 0) {
@@ -53,10 +73,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const auditStart = Date.now()
-  console.log(`[audit] Starting audit for handles: ${handles.join(', ')}`)
+  const tier = creatorUserId && !isAdmin
+    ? await getEffectiveTier(creatorUserId)
+    : 'pro'
+  const maxVideos = getMaxVideosForTier(tier)
+  console.log(`[audit] Starting audit for handles: ${handles.join(', ')} (tier=${tier}, maxVideos=${maxVideos})`)
 
   try {
-    const result = await runAudit(handles, config.ytApiKey)
+    const result = await runAudit(handles, config.ytApiKey, maxVideos)
     const videos = result.videos
     console.log(`[audit] Fetched ${videos.length} videos in ${Date.now() - auditStart}ms`)
 
@@ -84,8 +108,9 @@ export default defineEventHandler(async (event) => {
     const maxVideos = Number(config.commentsFetchMaxVideos) || 50
     if (config.ytApiKey && userId) {
       const cached = await getCachedComments(userId, handles)
+      let rawComments: YouTubeComment[] = []
       if (cached !== null) {
-        highIntentComments = cached
+        rawComments = cached
       } else {
         const videosToFetch = videos.slice(0, maxVideos)
         console.log(`[audit] Fetching comments for ${videosToFetch.length} videos...`)
@@ -103,11 +128,18 @@ export default defineEventHandler(async (event) => {
             )
           )
           for (const comments of batchResults) {
-            highIntentComments.push(...comments)
+            rawComments.push(...comments)
           }
         }
-        await setCachedComments(userId, handles, highIntentComments)
+        await setCachedComments(userId, handles, rawComments)
         console.log(`[audit] Comments fetched in ${Date.now() - commentsStart}ms`)
+      }
+      if (creatorUserId) {
+        const wrongIds = await getWrongCommentIds(creatorUserId)
+        const wrongSet = new Set(wrongIds)
+        highIntentComments = rawComments.filter((c) => !wrongSet.has(c.id))
+      } else {
+        highIntentComments = rawComments
       }
     }
 
@@ -120,6 +152,9 @@ export default defineEventHandler(async (event) => {
       await setCachedAudit(ADMIN_USER_ID, handles, videos, linkResults)
     }
 
+    if (creatorUserId && !isAdmin) {
+      await incrementAuditsUsed(creatorUserId)
+    }
     if (creatorUserId) {
       try {
         const { saveAuditHistoryWithLinks } = await import('../service/auditHistoryService')

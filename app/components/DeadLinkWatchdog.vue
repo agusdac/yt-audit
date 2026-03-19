@@ -22,13 +22,22 @@
           <p class="text-sm text-error-text line-through break-all font-mono pr-24">{{ item.url }}</p>
           <p class="text-sm text-text-muted">
             {{ item.videoIds.length }} video{{ item.videoIds.length > 1 ? 's' : '' }} affected
-            · <Tooltip
-              :content="Math.round(item.revenueLoss) < 1 ? 'Even if this doesn\'t lose revenue, it\'s better to fix dead links for the Google algorithm and to keep everything tidy.' : undefined"
-              :trigger-class="Math.round(item.revenueLoss) < 1 ? 'cursor-help underline decoration-dotted underline-offset-2 decoration-text-muted' : ''">
-              <span>~${{ Math.round(item.revenueLoss) }}/month estimated loss</span>
-            </Tooltip>
+            <template v-if="props.tier === 'pro'">
+              · <Tooltip
+                :content="Math.round(item.revenueLoss) < 1 ? 'Even if this doesn\'t lose revenue, it\'s better to fix dead links for the Google algorithm and to keep everything tidy.' : undefined"
+                :trigger-class="Math.round(item.revenueLoss) < 1 ? 'cursor-help underline decoration-dotted underline-offset-2 decoration-text-muted' : ''">
+                <span>~${{ Math.round(item.revenueLoss) }}/month estimated loss</span>
+              </Tooltip>
+            </template>
           </p>
           <div class="flex flex-wrap gap-2 items-center">
+            <NuxtLink
+              v-if="props.tier === 'pro' && item.videoIds.length > 0"
+              :to="bulkReplaceHref(item)"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from/20 to-btn-to/20 border border-btn-from/40 text-btn-from hover:opacity-90"
+            >
+              Bulk replace
+            </NuxtLink>
             <a v-if="item.firstVideoId" :href="studioUrl(item.firstVideoId)" target="_blank" rel="noopener noreferrer"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-button text-sm font-semibold bg-error-bg border-2 border-error-border text-error-text hover:opacity-90 hover:border-error-text transition-all">
               Fix in YouTube Studio
@@ -48,9 +57,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-const props = defineProps<{
-  items: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string; firstVideoTitle?: string }>
-}>()
+const props = withDefaults(
+  defineProps<{
+    items: Array<{ url: string; videoIds: string[]; revenueLoss: number; firstVideoId?: string; firstVideoTitle?: string }>
+    tier?: 'free' | 'pro'
+  }>(),
+  { tier: 'free' }
+)
 
 
 const sectionOpen = ref(true)
@@ -62,6 +75,13 @@ const sortedItems = computed(() =>
 let copyFeedbackTimeout: ReturnType<typeof setTimeout> | null = null
 
 const studioUrl = (videoId: string) => `https://studio.youtube.com/video/${videoId}/edit`
+
+const bulkReplaceHref = (item: { url: string; videoIds: string[] }) => {
+  const params = new URLSearchParams()
+  params.set('oldUrl', item.url)
+  params.set('videoIds', item.videoIds.join(','))
+  return `/bulk-links?${params.toString()}`
+}
 
 const copyStudioLink = async (item: { firstVideoId?: string }) => {
   const videoId = item.firstVideoId

@@ -41,6 +41,17 @@
             (store.me?.linkedChannels?.length ?? 0) > 1 ? 's' : '' }}</p>
         </div>
       </div>
+      <div v-if="!sidebarCollapsed" class="px-4 pb-2">
+        <NuxtLink
+          to="/settings"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-button text-xs font-medium transition-colors"
+          :class="tier.tier.value === 'pro'
+            ? 'bg-gradient-to-r from-btn-from/20 to-btn-to/20 border border-btn-from/40 text-btn-from'
+            : 'bg-card-bg border border-border-default text-text-muted hover:bg-card-bg-attention'"
+        >
+          <span>{{ tier.tier.value === 'pro' ? 'Pro' : 'Free' }}</span>
+        </NuxtLink>
+      </div>
 
       <nav class="flex-1 p-3 space-y-1" :class="sidebarCollapsed ? 'flex flex-col items-center' : ''">
         <NuxtLink to="/dashboard" class="flex items-center rounded-button text-sm font-medium transition-colors" :class="[
@@ -151,10 +162,12 @@
 <script setup lang="ts">
 import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 import { useTheme } from '~~/composables/useTheme'
+import { useTier } from '~~/composables/useTier'
 
 const SIDEBAR_COLLAPSED_KEY = 'upscrub-sidebar-collapsed'
 
 const store = useCreatorWorkspaceStore()
+const tier = useTier()
 const { theme, initTheme, toggleTheme } = useTheme()
 
 const sidebarCollapsed = ref(false)
