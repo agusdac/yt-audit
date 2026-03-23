@@ -16,6 +16,7 @@ import { runLinkCheck } from '../service/linkCheckService'
 import { getCachedComments, setCachedComments } from '../service/commentCacheService'
 import { fetchCommentsForVideo } from '../service/commentService'
 import { getWrongCommentIds } from '../service/wrongCommentsService'
+import { getAnsweredCommentIds } from '../service/answeredCommentsService'
 
 const ADMIN_USER_ID = 'admin'
 
@@ -105,14 +106,14 @@ export default defineEventHandler(async (event) => {
     }
 
     let highIntentComments: YouTubeComment[] = []
-    const maxVideos = Number(config.commentsFetchMaxVideos) || 50
-    if (config.ytApiKey && userId) {
+    const maxCommentVideos = Number(config.commentsFetchMaxVideos) || 50
+    if (config.ytApiKey && userId && tier === 'pro') {
       const cached = await getCachedComments(userId, handles)
       let rawComments: YouTubeComment[] = []
       if (cached !== null) {
         rawComments = cached
       } else {
-        const videosToFetch = videos.slice(0, maxVideos)
+        const videosToFetch = videos.slice(0, maxCommentVideos)
         console.log(`[audit] Fetching comments for ${videosToFetch.length} videos...`)
         const commentsStart = Date.now()
         const hfOptions = config.detectIntentViaHf && config.hfToken
@@ -135,9 +136,12 @@ export default defineEventHandler(async (event) => {
         console.log(`[audit] Comments fetched in ${Date.now() - commentsStart}ms`)
       }
       if (creatorUserId) {
-        const wrongIds = await getWrongCommentIds(creatorUserId)
-        const wrongSet = new Set(wrongIds)
-        highIntentComments = rawComments.filter((c) => !wrongSet.has(c.id))
+        const [wrongIds, answeredIds] = await Promise.all([
+          getWrongCommentIds(creatorUserId),
+          getAnsweredCommentIds(creatorUserId)
+        ])
+        const exclude = new Set([...wrongIds, ...answeredIds])
+        highIntentComments = rawComments.filter((c) => !exclude.has(c.id))
       } else {
         highIntentComments = rawComments
       }

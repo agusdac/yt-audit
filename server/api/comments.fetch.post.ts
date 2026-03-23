@@ -3,6 +3,7 @@ import { getCachedComments, setCachedComments } from '~~/server/service/commentC
 import { fetchCommentsForVideo } from '~~/server/service/commentService'
 import { getAnsweredCommentIds } from '~~/server/service/answeredCommentsService'
 import { getWrongCommentIds } from '~~/server/service/wrongCommentsService'
+import { getEffectiveTier } from '~~/server/service/tierService'
 import type { YouTubeComment } from '~~/server/service/commentService'
 
 export default defineEventHandler(async (event) => {
@@ -10,6 +11,14 @@ export default defineEventHandler(async (event) => {
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) {
     throw createError({ statusCode: 401, message: 'Sign in to fetch comments' })
+  }
+
+  if ((await getEffectiveTier(userId)) !== 'pro') {
+    const [answeredCommentIds, wrongCommentIds] = await Promise.all([
+      getAnsweredCommentIds(userId),
+      getWrongCommentIds(userId)
+    ])
+    return { highIntentComments: [], answeredCommentIds, wrongCommentIds }
   }
 
   const body = await readBody<{ videos: Array<{ id: string; title: string }> }>(event)

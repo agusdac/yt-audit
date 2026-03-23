@@ -2,12 +2,17 @@ import { getLinkedChannels } from '~~/server/service/userService'
 import { getCachedComments } from '~~/server/service/commentCacheService'
 import { getAnsweredCommentIds } from '~~/server/service/answeredCommentsService'
 import { getWrongCommentIds } from '~~/server/service/wrongCommentsService'
+import { getEffectiveTier } from '~~/server/service/tierService'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) {
     throw createError({ statusCode: 401, message: 'Sign in to access comments' })
+  }
+
+  if ((await getEffectiveTier(userId)) !== 'pro') {
+    return { highIntentComments: [], answeredCommentIds: [], wrongCommentIds: [] }
   }
 
   const channels = await getLinkedChannels(userId)

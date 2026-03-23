@@ -25,7 +25,7 @@
           </p>
           <p class="text-sm text-text-muted">
             {{ item.videoIds.length }} video{{ item.videoIds.length > 1 ? 's' : '' }} affected
-            <template v-if="variant === 'dead' && item.revenueLoss != null">
+            <template v-if="tier === 'pro' && variant === 'dead' && item.revenueLoss != null">
               · <Tooltip
                 :content="Math.round(item.revenueLoss) < 1 ? 'Even if this doesn\'t lose revenue, it\'s better to fix dead links for the Google algorithm and to keep everything tidy.' : undefined"
                 :trigger-class="Math.round(item.revenueLoss) < 1 ? 'cursor-help underline decoration-dotted underline-offset-2 decoration-text-muted' : ''">
@@ -33,14 +33,6 @@
               </Tooltip>
             </template>
           </p>
-          <div class="flex flex-wrap gap-2 items-center">
-            <label class="flex items-center gap-2 min-w-0 flex-1">
-              <span class="text-sm text-text-muted whitespace-nowrap">Replace with:</span>
-              <input :model-value="replacementUrls[item.url]" type="url" placeholder="https://new-link.com"
-                class="flex-1 min-w-[200px] px-3 py-1.5 rounded-button text-sm bg-card-bg border border-border-default text-text-primary placeholder:text-text-muted"
-                @input="(e) => $emit('update:replacement', item.url, (e.target as HTMLInputElement).value)" />
-            </label>
-          </div>
           <div class="flex flex-wrap gap-2">
             <a v-if="item.firstVideoId" :href="`https://studio.youtube.com/video/${item.firstVideoId}/edit`"
               target="_blank" rel="noopener noreferrer"
@@ -48,11 +40,6 @@
               :class="variant === 'dead' ? 'bg-error-bg border-2 border-error-border text-error-text hover:border-error-text' : 'bg-alert-bg border-2 border-alert-border text-alert-text'">
               {{ variant === 'dead' ? 'Fix: Edit in YouTube Studio →' : 'Edit in YouTube Studio →' }}
             </a>
-            <button v-if="replacementUrls[item.url]" type="button"
-              class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-              @click="$emit('copy-replacement-list', item)">
-              Copy replacement list
-            </button>
             <button v-if="item.videoIds?.length" type="button"
               class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
               @click="$emit('copy-studio-urls', item.videoIds)">
@@ -66,21 +53,22 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-  variant: 'dead' | 'redirected'
-  title: string
-  items: Array<{
-    url: string
-    videoIds: string[]
-    revenueLoss?: number
-    firstVideoId?: string
-  }>
-  replacementUrls: Record<string, string>
-}>()
+const props = withDefaults(
+  defineProps<{
+    variant: 'dead' | 'redirected'
+    title: string
+    items: Array<{
+      url: string
+      videoIds: string[]
+      revenueLoss?: number
+      firstVideoId?: string
+    }>
+    tier?: 'free' | 'pro'
+  }>(),
+  { tier: 'free' }
+)
 
 defineEmits<{
-  'update:replacement': [url: string, value: string]
-  'copy-replacement-list': [item: { url: string; videoIds: string[] }]
   'copy-studio-urls': [videoIds: string[]]
 }>()
 

@@ -60,10 +60,6 @@ export const useCreatorWorkspaceStore = defineStore('creatorWorkspace', {
       this.isLoading = true
       this.error = null
       this.errorCode = null
-      this.videos = []
-      this.linkResults = []
-      this.highIntentComments = []
-      this.hasCommentsLoaded = false
 
       try {
         const response = await $fetch<{

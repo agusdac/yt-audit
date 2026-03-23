@@ -80,6 +80,7 @@
 
 <script setup lang="ts">
 import { useTier } from '~~/composables/useTier'
+import { useCreatorWorkspaceStore } from '~~/stores/creatorWorkspace'
 
 definePageMeta({
   middleware: 'auth',
@@ -89,6 +90,7 @@ useSeoMeta({ title: 'Bulk Replace Link | UpScrub' })
 
 const route = useRoute()
 const tier = useTier()
+const workspace = useCreatorWorkspaceStore()
 
 const oldUrl = ref('')
 const newUrl = ref('')
@@ -146,6 +148,9 @@ const apply = async () => {
     )
     result.value = res
     success.value = true
+    if (res.updated > 0 && workspace.me?.linkedChannels?.length) {
+      await workspace.runAudit()
+    }
   } catch (e: unknown) {
     const err = e as { data?: { message?: string; code?: string }; statusCode?: number; message?: string }
     error.value = err?.data?.message ?? err?.message ?? 'Failed to update links'

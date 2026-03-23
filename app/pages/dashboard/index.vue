@@ -115,7 +115,7 @@
           :on-clear-error="store.clearError"
           :scheduled-audit-enabled="store.creatorSettings?.scheduledAuditEnabled"
           :scheduled-audit-frequency="store.creatorSettings?.scheduledAuditFrequency"
-          :tier="tier.tier.value"
+          :tier="tierRef"
           :channel-handle-for-score="store.me?.linkedChannels?.[0]?.handle"
           channel-score-detail-href="/channel-score"
         />
@@ -137,7 +137,7 @@ definePageMeta({
 useSeoMeta({ title: 'Dashboard | UpScrub' })
 
 const store = useCreatorWorkspaceStore()
-const tier = useTier()
+const { tier: tierRef } = useTier()
 
 const ONBOARDING_KEY = 'upscrub_onboarding_seen'
 const showOnboardingModal = computed(() => {

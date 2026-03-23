@@ -11,10 +11,13 @@ export const getAccessToken = async (userId: string): Promise<string> => {
   const user = await getUserById(userId)
   const refreshToken = user?.refreshToken
   if (!refreshToken) {
+    const isImpersonation = user?.googleId?.startsWith('impersonate-') ?? false
     throw createError({
       statusCode: 403,
-      message: 'Reconnect your YouTube account to use this feature. Sign out and sign in again.',
-      data: { code: 'REAUTH_REQUIRED' }
+      message: isImpersonation
+        ? 'Admin impersonation has no Google OAuth token. Bulk link updates and YouTube API replies require signing in with Google as the creator to test write actions.'
+        : 'Reconnect your YouTube account to use this feature. Sign out and sign in again.',
+      data: { code: isImpersonation ? 'IMPERSONATION_NO_OAUTH' : 'REAUTH_REQUIRED' }
     })
   }
 

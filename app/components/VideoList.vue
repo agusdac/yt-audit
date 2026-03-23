@@ -28,7 +28,7 @@
         class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
         :class="sortBy === 'score' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
         @click="sortBy = 'score'">Score</button>
-      <button v-if="hasVideosWithRevenueLoss" type="button"
+      <button v-if="props.tier === 'pro' && hasVideosWithRevenueLoss" type="button"
         class="filter-btn px-3 py-1.5 rounded-button text-sm font-medium transition-all border"
         :class="sortBy === 'revenue' ? 'bg-filter-bg-active border-filter-border-active text-filter-text-active' : 'bg-card-bg border-filter-border text-filter-text hover:bg-filter-bg-hover'"
         @click="sortBy = 'revenue'">Revenue</button>
@@ -142,7 +142,7 @@
     </div>
 
     <!-- Revenue loss banner -->
-    <div v-if="totalDeadLinkRevenueLoss > 0"
+    <div v-if="props.tier === 'pro' && totalDeadLinkRevenueLoss > 0"
       class="rounded-card px-6 py-5 bg-error-bg/30 border border-error-border text-center">
       <p class="text-3xl md:text-4xl font-bold text-error-text">
         You're losing ~${{ Math.round(totalDeadLinkRevenueLoss) }}/month to dead links
@@ -151,14 +151,17 @@
     </div>
 
     <!-- Dead links -->
+    <DeadLinkWatchdog
+      v-if="props.tier === 'pro' && deadLinksWithRevenue.length > 0"
+      :items="deadLinksWithRevenue"
+      tier="pro"
+    />
     <LinkIssuesCard
-      v-if="deadLinksWithRevenue.length > 0"
+      v-else-if="deadLinksWithRevenue.length > 0"
       variant="dead"
       title="Dead links — fix these first"
+      :tier="props.tier"
       :items="deadLinksWithRevenue"
-      :replacement-urls="replacementUrls"
-      @update:replacement="(url, value) => replacementUrls[url] = value"
-      @copy-replacement-list="copyReplacementList"
       @copy-studio-urls="copyStudioUrls"
     />
 
@@ -181,10 +184,8 @@
       v-if="redirectedLinksWithRevenue.length > 0"
       variant="redirected"
       title="Redirected links"
+      :tier="props.tier"
       :items="redirectedLinksWithRevenue"
-      :replacement-urls="replacementUrls"
-      @update:replacement="(url, value) => replacementUrls[url] = value"
-      @copy-replacement-list="copyReplacementList"
       @copy-studio-urls="copyStudioUrls"
     />
 
@@ -205,21 +206,6 @@
           Sponsor may have removed the code—you could be giving free advertising. Verify and update.
         </p>
       </div>
-    </div>
-
-    <!-- Export replacement list -->
-    <div v-if="(deadLinksWithRevenue.length > 0 || redirectedLinksWithRevenue.length > 0) && hasAnyReplacement"
-      class="rounded-card p-4 bg-filter-bg border border-border-default flex flex-wrap gap-2">
-      <button type="button"
-        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-        @click="copyAllReplacements">
-        {{ copiedAllReplacements ? 'Copied!' : 'Copy replacement list' }}
-      </button>
-      <button type="button"
-        class="px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention"
-        @click="exportReplacementCsv">
-        Export replacement list (CSV)
-      </button>
     </div>
 
     <!-- Results count -->
@@ -243,7 +229,7 @@
           :class="video.id === props.highlightVideoId ? 'ring-2 ring-border-default rounded-card -m-0.5 p-0.5' : ''">
           <VideoCard :video="video" :has-monetization-links="hasMonetizationLinks(video.links)"
             :video-score="props.videoScores?.[video.id]"
-            :revenue-loss="revenueLossByVideoId.get(video.id)"
+            :revenue-loss="props.tier === 'pro' ? revenueLossByVideoId.get(video.id) : undefined"
             :link-status="getLinkStatusForVideo(video.id)"
             :is-user-sponsor-link="isUserSponsorLink" :has-code-issue="hasCodeIssue" :link-class="linkClass" />
         </div>
@@ -287,8 +273,9 @@ const props = withDefaults(
     linkResultsRef?: Ref<LinkCheckResult[]>
     highlightVideoId?: string
     videoScores?: Record<string, number>
+    tier?: 'free' | 'pro'
   }>(),
-  { syncLinkResultsToStore: false }
+  { syncLinkResultsToStore: false, tier: 'free' }
 )
 
 const PAGE_SIZE = 10
@@ -308,8 +295,6 @@ const userSponsors = ref<string[]>([])
 const checkOnlyMySponsors = ref(false)
 const currentPage = ref(1)
 const highlightRef = ref<HTMLElement | null>(null)
-const replacementUrls = ref<Record<string, string>>({})
-const copiedAllReplacements = ref(false)
 
 const parseUserSponsors = () => {
   userSponsors.value = userSponsorsInput.value
@@ -584,13 +569,17 @@ const mergedUserSponsors = computed(() => {
 })
 const deadLinksWithRevenue = computed(() => {
   const dead = linkResults.value.filter(r => r.category === 'dead')
+  const videoMap = new Map(props.videos.map((v) => [v.id, v]))
   return dead.map(r => {
     const { revenueLoss } = getRevenueLossForLink(r, props.videos, { userSponsors: mergedUserSponsors.value, creatorSettings: creatorSettings ?? undefined })
+    const firstVideoId = (r.videoIds ?? [])[0]
+    const firstVideo = firstVideoId ? videoMap.get(firstVideoId) : undefined
     return {
       url: r.url,
       videoIds: r.videoIds ?? [],
       revenueLoss,
-      firstVideoId: (r.videoIds ?? [])[0]
+      firstVideoId,
+      firstVideoTitle: firstVideo?.title
     }
   })
 })
@@ -619,63 +608,13 @@ const redirectedLinksWithRevenue = computed(() => {
   }))
 })
 
-const hasAnyReplacement = computed(() => {
-  const allItems = [...deadLinksWithRevenue.value, ...redirectedLinksWithRevenue.value]
-  return allItems.some((item) => {
-    const v = replacementUrls.value[item.url]
-    return v && v.trim().startsWith('http')
-  })
-})
-
-const escapeCsv = (s: string) => `"${String(s).replace(/"/g, '""')}"`
-
-const copyAllReplacements = async () => {
-  const allItems = [...deadLinksWithRevenue.value, ...redirectedLinksWithRevenue.value]
-  const lines = allItems
-    .map((item) => {
-      const newUrl = replacementUrls.value[item.url]?.trim()
-      if (!newUrl || !item.videoIds?.length) return null
-      return `${item.url} → ${newUrl}`
-    })
-    .filter((l): l is string => l != null)
-  if (lines.length === 0) return
-  await navigator.clipboard.writeText(lines.join('\n'))
-  copiedAllReplacements.value = true
-  setTimeout(() => { copiedAllReplacements.value = false }, 2000)
-}
-
-const copyReplacementList = async (item: { url: string; videoIds: string[] }) => {
-  const newUrl = replacementUrls.value[item.url]?.trim()
-  if (!newUrl || !item.videoIds?.length) return
-  const lines = item.videoIds.map((vid) => `${vid},${escapeCsv(item.url)},${escapeCsv(newUrl)}`).join('\n')
-  const text = `videoId,oldUrl,newUrl\n${lines}`
-  await navigator.clipboard.writeText(text)
-}
-
 const copyStudioUrls = async (videoIds: string[]) => {
   const urls = videoIds.map((id) => `https://studio.youtube.com/video/${id}/edit`).join('\n')
   await navigator.clipboard.writeText(urls)
 }
 
-const exportReplacementCsv = () => {
-  const rows: Array<{ videoId: string; oldUrl: string; newUrl: string }> = []
-  const allItems = [...deadLinksWithRevenue.value, ...redirectedLinksWithRevenue.value]
-  for (const item of allItems) {
-    const newUrl = replacementUrls.value[item.url]?.trim()
-    if (!newUrl || !item.videoIds?.length) continue
-    for (const vid of item.videoIds) {
-      rows.push({ videoId: vid, oldUrl: item.url, newUrl })
-    }
-  }
-  if (rows.length === 0) return
-  const csv = 'videoId,oldUrl,newUrl\n' + rows.map((r) => `${r.videoId},${escapeCsv(r.oldUrl)},${escapeCsv(r.newUrl)}`).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `link-replacements-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-}
+watch(() => props.tier, (t) => {
+  if (t === 'free' && sortBy.value === 'revenue') sortBy.value = 'date'
+})
 
 </script>

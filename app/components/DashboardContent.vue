@@ -134,9 +134,10 @@
         <div class="lg:col-span-1 space-y-4">
           <ChannelScoreWidget :channel-handle="props.channelHandleForScore"
             :detail-href="props.channelScoreDetailHref ?? '/channel-score'" />
-          <HighIntentWidget :comments-status="props.commentsStatus" :high-intent-comments="props.highIntentComments"
-            :has-videos="props.hasVideos" :is-fetching-comments="props.isFetchingComments"
-            :view-comments-href="props.viewCommentsHref" :on-fetch-comments="props.onFetchComments" />
+          <HighIntentWidget :tier="props.tier ?? 'free'" :comments-status="props.commentsStatus"
+            :high-intent-comments="props.highIntentComments" :has-videos="props.hasVideos"
+            :is-fetching-comments="props.isFetchingComments" :view-comments-href="props.viewCommentsHref"
+            :on-fetch-comments="props.onFetchComments" />
           <div class="rounded-card p-4 bg-card-bg border-2 border-border-default">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xl">📧</span>

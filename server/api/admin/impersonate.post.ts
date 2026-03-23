@@ -1,9 +1,10 @@
 import { getChannelByHandle } from '~~/server/service/youtubeService'
 import { getOrCreateImpersonationUser } from '~~/server/service/userService'
+import { getOrCreateSubscription, setAdminOverride } from '~~/server/service/tierService'
 import { setAdminSession } from '~~/server/utils/adminAuth'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody<{ password?: string; handle?: string }>(event)
+  const body = await readBody<{ password?: string; handle?: string; tier?: 'free' | 'pro' }>(event)
   const config = useRuntimeConfig(event)
 
   if (!config.adminPassword) {
@@ -25,6 +26,10 @@ export default defineEventHandler(async (event) => {
 
   const channelInfo = await getChannelByHandle(handle, config.ytApiKey)
   const userId = await getOrCreateImpersonationUser(channelInfo)
+
+  const tier = body?.tier === 'free' ? 'free' : 'pro'
+  await getOrCreateSubscription(userId)
+  await setAdminOverride(userId, tier)
 
   setAdminSession(event, config)
   await setUserSession(event, {

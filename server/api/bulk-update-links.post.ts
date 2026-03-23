@@ -77,5 +77,10 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (updated.length > 0) {
+    const { deleteAuditCacheForUser } = await import('../service/auditCacheService')
+    await deleteAuditCacheForUser(userId)
+  }
+
   return { updated: updated.length, failed, updatedIds: updated }
 })

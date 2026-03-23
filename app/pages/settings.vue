@@ -5,19 +5,19 @@
     <div class="rounded-card p-6 bg-card-bg border border-border-default mb-6">
       <h2 class="text-lg font-semibold text-text-primary mb-3">Plan</h2>
       <div class="flex flex-wrap items-center gap-4 mb-4">
-        <span class="inline-flex px-3 py-1 rounded-button text-sm font-medium" :class="tier.tier.value === 'pro'
+        <span class="inline-flex px-3 py-1 rounded-button text-sm font-medium" :class="tierRef === 'pro'
           ? 'bg-gradient-to-r from-btn-from/20 to-btn-to/20 border border-btn-from/40 text-btn-from'
           : 'bg-card-bg border border-border-default text-text-muted'">
-          {{ tier.tier.value === 'pro' ? 'Pro' : 'Free' }}
+          {{ tierRef === 'pro' ? 'Pro' : 'Free' }}
         </span>
         <span class="text-sm text-text-muted">
-          {{ tier.auditsLimit === null
+          {{ auditsLimit === null
             ? 'Unlimited audits'
-            : `${tier.auditsUsedThisMonth} / ${tier.auditsLimit} audits this month` }}
+            : `${auditsUsedThisMonth} / ${auditsLimit} audits this month` }}
         </span>
       </div>
-      <p v-if="tier.currentPeriodEnd.value && tier.tier.value === 'pro'" class="text-sm text-text-muted mb-4">
-        Your plan renews on {{ formatDate(tier.currentPeriodEnd.value) }}.
+      <p v-if="currentPeriodEnd && tierRef === 'pro'" class="text-sm text-text-muted mb-4">
+        Your plan renews on {{ formatDate(currentPeriodEnd) }}.
       </p>
       <div v-if="checkoutError" class="text-sm text-error-text mb-3">{{ checkoutError }}</div>
       <p v-if="supportHref" class="text-sm text-text-muted mb-3">
@@ -26,13 +26,13 @@
         </a>
       </p>
       <div class="flex flex-wrap gap-3">
-        <button v-if="tier.tier.value === 'free'" type="button"
+        <button v-if="tierRef === 'free'" type="button"
           class="inline-flex px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to"
           @click="goToCheckout">
           Upgrade to Pro
         </button>
-        <a v-else-if="tier.canManageSubscription.value && tier.manageSubscriptionUrl.value"
-          :href="tier.manageSubscriptionUrl.value" target="_blank" rel="noopener noreferrer"
+        <a v-else-if="canManageSubscription && manageSubscriptionUrl"
+          :href="manageSubscriptionUrl" target="_blank" rel="noopener noreferrer"
           class="inline-flex px-4 py-2 rounded-button text-sm font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention">
           Manage subscription
         </a>
@@ -40,7 +40,7 @@
     </div>
 
     <h2 class="text-xl font-bold text-text-primary mb-2">Revenue Settings</h2>
-    <p class="text-text-muted mb-6">
+    <p v-if="tierRef === 'pro'" class="text-text-muted mb-6">
       Customize revenue estimates for your niche. Leave blank to use defaults.
     </p>
 
@@ -57,7 +57,19 @@
       <span>{{ successMessage }}</span>
     </div>
 
-    <div class="rounded-card p-6 bg-card-bg border border-border-default space-y-6">
+    <div v-if="tierRef === 'free'"
+      class="rounded-card p-6 bg-card-bg-attention border border-border-default mb-6">
+      <p class="text-sm text-text-muted mb-3">
+        Revenue estimates, custom CPM/affiliate values, and sponsor domain classification are Pro features.
+      </p>
+      <button type="button"
+        class="inline-flex px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to"
+        @click="goToCheckout">
+        Upgrade to Pro
+      </button>
+    </div>
+
+    <div v-else class="rounded-card p-6 bg-card-bg border border-border-default space-y-6">
       <div>
         <label class="block text-sm font-medium text-text-primary mb-1">Sponsor CPM ($/1000 views)</label>
         <input v-model.number="form.cpmSponsor" type="number" min="0" step="1" placeholder="25 (default)"
@@ -94,22 +106,13 @@
           Get a weekly or monthly email with dead-link alerts for your linked channels. Requires at least one linked
           channel.
         </p>
-        <div v-if="tier.tier.value === 'free'"
-          class="rounded-card p-4 bg-card-bg-attention border border-border-default mb-3">
-          <p class="text-sm text-text-muted mb-2">Upgrade to Pro to enable scheduled audit emails.</p>
-          <button type="button"
-            class="inline-flex px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to"
-            @click="goToCheckout">
-            Upgrade to Pro
-          </button>
-        </div>
-        <div v-else class="flex items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-3">
           <input id="scheduled-audit" v-model="form.scheduledAuditEnabled" type="checkbox"
             class="rounded border-border-default" />
           <label for="scheduled-audit" class="text-sm font-medium text-text-primary">Enable scheduled audit
             emails</label>
         </div>
-        <div v-if="form.scheduledAuditEnabled && tier.tier.value === 'pro'" class="ml-6 space-y-2">
+        <div v-if="form.scheduledAuditEnabled" class="ml-6 space-y-2">
           <label class="block text-sm font-medium text-text-primary">Frequency</label>
           <div class="flex gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
@@ -153,7 +156,14 @@ definePageMeta({
 useSeoMeta({ title: 'Settings | UpScrub' })
 
 const store = useCreatorWorkspaceStore()
-const tier = useTier()
+const {
+  tier: tierRef,
+  auditsUsedThisMonth,
+  auditsLimit,
+  currentPeriodEnd,
+  canManageSubscription,
+  manageSubscriptionUrl
+} = useTier()
 const config = useRuntimeConfig()
 const supportHref = config.public?.supportUrl as string || `mailto:${config.public?.supportEmail || 'support@upscrub.com'}`
 
@@ -199,6 +209,7 @@ onMounted(async () => {
 let successTimeout: ReturnType<typeof setTimeout> | null = null
 
 const save = async () => {
+  if (tierRef.value !== 'pro') return
   successMessage.value = null
   const s = form.value
   const settings: Record<string, number | string[] | boolean | 'weekly' | 'monthly'> = {}
@@ -208,7 +219,7 @@ const save = async () => {
   if (typeof s.avgCommission === 'number') settings.avgCommission = s.avgCommission
   const domains = s.sponsorDomains.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean)
   if (domains.length > 0) settings.sponsorDomains = domains
-  settings.scheduledAuditEnabled = tier.tier.value === 'pro' ? s.scheduledAuditEnabled : false
+  settings.scheduledAuditEnabled = s.scheduledAuditEnabled
   if (settings.scheduledAuditEnabled) settings.scheduledAuditFrequency = s.scheduledAuditFrequency
   saving.value = true
   try {
@@ -227,6 +238,7 @@ const save = async () => {
 }
 
 const reset = async () => {
+  if (tierRef.value !== 'pro') return
   successMessage.value = null
   saving.value = true
   try {

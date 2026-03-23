@@ -86,5 +86,10 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (replied.length > 0) {
+    const { deleteAuditCacheForUser } = await import('../../service/auditCacheService')
+    await deleteAuditCacheForUser(userId)
+  }
+
   return { replied: replied.length, failed, skipped, repliedIds: replied }
 })

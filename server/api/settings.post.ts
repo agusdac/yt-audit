@@ -1,11 +1,17 @@
 import type { CreatorRevenueSettings, ScheduledAuditFrequency } from '~~/server/service/creatorSettingsService'
 import { setCreatorSettings } from '~~/server/service/creatorSettingsService'
+import { getEffectiveTier } from '~~/server/service/tierService'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId) {
     throw createError({ statusCode: 401, message: 'Sign in to update settings' })
+  }
+
+  const tier = await getEffectiveTier(userId)
+  if (tier !== 'pro') {
+    return { settings: {} }
   }
 
   const body = await readBody<CreatorRevenueSettings & { scheduledAuditEnabled?: boolean; scheduledAuditFrequency?: string }>(event)

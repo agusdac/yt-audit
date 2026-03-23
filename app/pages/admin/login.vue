@@ -40,6 +40,19 @@
               placeholder="@SomeCreator"
             />
           </div>
+          <fieldset>
+            <legend class="block text-sm text-text-muted mb-2">Effective tier (override)</legend>
+            <div class="flex flex-wrap gap-4">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input v-model="impersonateTier" type="radio" value="pro" class="rounded-full" />
+                <span class="text-sm text-text-primary">Pro (default)</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input v-model="impersonateTier" type="radio" value="free" class="rounded-full" />
+                <span class="text-sm text-text-primary">Free</span>
+              </label>
+            </div>
+          </fieldset>
           <button
             type="button"
             class="w-full px-4 py-2 rounded-button font-medium bg-card-bg border border-border-default text-text-primary hover:bg-card-bg-attention disabled:opacity-50"
@@ -59,6 +72,7 @@ definePageMeta({ layout: false })
 
 const password = ref('')
 const impersonateHandle = ref('')
+const impersonateTier = ref<'free' | 'pro'>('pro')
 const error = ref('')
 const isLoading = ref(false)
 
@@ -86,7 +100,11 @@ const impersonate = async () => {
   try {
     await $fetch('/api/admin/impersonate', {
       method: 'POST',
-      body: { password: password.value, handle: impersonateHandle.value.trim() }
+      body: {
+        password: password.value,
+        handle: impersonateHandle.value.trim(),
+        tier: impersonateTier.value
+      }
     })
     const me = await $fetch<{ user?: { id: string }; linkedChannels?: Array<{ handle: string }> }>('/api/auth/me')
     if (!me?.linkedChannels?.length) {

@@ -4,6 +4,7 @@ import type { VideoScoreResult } from '~~/utils/videoScore'
 import { getVideoDetails, getChannelVideoIds } from '~~/server/service/youtubeService'
 import { runLinkCheck } from '~~/server/service/linkCheckService'
 import { getLinkedChannels } from '~~/server/service/userService'
+import { getEffectiveTier } from '~~/server/service/tierService'
 import { getCachedVideoScore, setCachedVideoScore } from '~~/server/service/scoreCacheService'
 import { classifyLinks } from '~~/utils/url'
 import { parseISO8601ToSeconds, getVideoType } from '~~/utils/duration'
@@ -13,7 +14,7 @@ import { getLinksToCheck } from '~~/utils/url'
 export default defineEventHandler(async (event): Promise<{
   video: VideoDetails
   linkResults: LinkCheckResult[]
-  score: VideoScoreResult
+  score: VideoScoreResult | null
 }> => {
   const videoId = getRouterParam(event, 'videoId')
   if (!videoId) {
@@ -62,33 +63,10 @@ export default defineEventHandler(async (event): Promise<{
   const forceRefresh = getQuery(event).refresh === '1'
   const ttlHours = Number(config.scoreCacheTtlHours) || 24
 
-  let score: VideoScoreResult
-  if (!forceRefresh) {
-    const cached = await getCachedVideoScore(videoId, ttlHours)
-    if (cached) {
-      const video: VideoDetails = {
-        id: raw.id,
-        title: raw.snippet.title,
-        description: raw.snippet.description,
-        publishedAt: raw.snippet.publishedAt,
-        viewCount: parseInt(raw.statistics.viewCount) || 0,
-        likeCount: parseInt(raw.statistics.likeCount) || 0,
-        commentCount: parseInt(raw.statistics.commentCount) || 0,
-        duration: parseISO8601ToSeconds(raw.contentDetails.duration),
-        type: getVideoType(raw),
-        links,
-        hasPaidProductPlacement: raw.paidProductPlacementDetails?.hasPaidProductPlacement ?? false,
-        channelHandle: linkedChannel.handle,
-        thumbnails: raw.snippet.thumbnails ? { maxres: raw.snippet.thumbnails.maxres } : undefined,
-        definition: raw.contentDetails.definition,
-        channelId: raw.snippet.channelId,
-        tags: (raw.snippet as { tags?: string[] }).tags
-      }
-      return { video, linkResults, score: cached }
-    }
-  }
-
-  const channelVideoIds = await getChannelVideoIds(linkedChannel.handle, config.ytApiKey, 500)
+  const tier = await getEffectiveTier(creatorUserId!)
+  const last10Ids =
+    tier === 'free' ? await getChannelVideoIds(linkedChannel.handle, config.ytApiKey, 10) : []
+  const scoreAllowed = tier === 'pro' || last10Ids.includes(videoId)
 
   const video: VideoDetails = {
     id: raw.id,
@@ -109,7 +87,20 @@ export default defineEventHandler(async (event): Promise<{
     tags: (raw.snippet as { tags?: string[] }).tags
   }
 
-  score = calculateVideoScore(
+  if (!scoreAllowed) {
+    return { video, linkResults, score: null }
+  }
+
+  if (!forceRefresh) {
+    const cached = await getCachedVideoScore(videoId, ttlHours)
+    if (cached) {
+      return { video, linkResults, score: cached }
+    }
+  }
+
+  const channelVideoIds = await getChannelVideoIds(linkedChannel.handle, config.ytApiKey, 500)
+
+  const score = calculateVideoScore(
     {
       title: video.title,
       description: video.description,

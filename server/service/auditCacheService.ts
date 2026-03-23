@@ -14,7 +14,7 @@ export async function getCachedAudit(
   userId: string,
   handles: string[],
   ttlHours: number
-): Promise<{ videos: VideoDetails[]; linkResults: LinkCheckResult[] } | null> {
+): Promise<{ videos: VideoDetails[]; linkResults: LinkCheckResult[]; cachedAt: number } | null> {
   const handlesHash = getHandlesHash(handles)
   const minCachedAt = Math.floor(Date.now() / 1000) - ttlHours * 60 * 60
 
@@ -58,4 +58,8 @@ export async function setCachedAudit(
         cachedAt
       }
     })
+}
+
+export const deleteAuditCacheForUser = async (userId: string): Promise<void> => {
+  await db.delete(auditCache).where(eq(auditCache.userId, userId))
 }

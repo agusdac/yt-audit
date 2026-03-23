@@ -21,6 +21,7 @@
           ← Back to Videos
         </NuxtLink>
         <button
+          v-if="data.score != null"
           type="button"
           class="px-3 py-1.5 rounded-button text-sm font-medium bg-card-bg border border-border-default hover:bg-card-bg-attention disabled:opacity-60"
           :disabled="loading"
@@ -65,21 +66,35 @@
           </div>
         </div>
 
-        <VideoScoreCard :score="data.score" />
+        <VideoScoreCard v-if="data.score" :score="data.score" />
+        <div v-else
+          class="rounded-card bg-card-bg-attention border border-border-default p-6">
+          <h3 class="font-bold text-lg text-text-primary mb-2">Video score</h3>
+          <p class="text-sm text-text-muted mb-4">
+            Full per-video scores are a Pro feature. On Free we score only your 10 most recent uploads for channel
+            health.
+          </p>
+          <NuxtLink to="/settings"
+            class="inline-flex px-4 py-2 rounded-button text-sm font-medium bg-gradient-to-r from-btn-from to-btn-to text-white hover:from-btn-hover-from hover:to-btn-hover-to">
+            Upgrade to Pro
+          </NuxtLink>
+        </div>
 
         <div v-if="hasLinks" class="rounded-card bg-card-bg border border-border-default p-6">
           <h3 class="font-bold text-lg text-text-primary mb-4">Links in description</h3>
           <div class="space-y-4">
             <LinksSection v-if="data.video.links.sponsors.length" label="Sponsor" :urls="data.video.links.sponsors"
-              :link-results="data.linkResults" :video-id="data.video.id" />
+              :link-results="data.linkResults" :video-id="data.video.id" :tier="tierRef" />
             <LinksSection v-if="data.video.links.affiliates.length" label="Affiliate"
-              :urls="data.video.links.affiliates" :link-results="data.linkResults" :video-id="data.video.id" />
+              :urls="data.video.links.affiliates" :link-results="data.linkResults" :video-id="data.video.id"
+              :tier="tierRef" />
             <LinksSection v-if="data.video.links.merch.length" label="Merch" :urls="data.video.links.merch"
-              :link-results="data.linkResults" :video-id="data.video.id" />
+              :link-results="data.linkResults" :video-id="data.video.id" :tier="tierRef" />
             <LinksSection v-if="data.video.links.socialWithRevenue.length" label="Support"
-              :urls="data.video.links.socialWithRevenue" :link-results="data.linkResults" :video-id="data.video.id" />
+              :urls="data.video.links.socialWithRevenue" :link-results="data.linkResults" :video-id="data.video.id"
+              :tier="tierRef" />
             <LinksSection v-if="data.video.links.other.length" label="Other" :urls="data.video.links.other"
-              :link-results="data.linkResults" :video-id="data.video.id" />
+              :link-results="data.linkResults" :video-id="data.video.id" :tier="tierRef" />
           </div>
         </div>
 
@@ -99,6 +114,7 @@ import type { VideoDetails } from '~~/types/youtube'
 import type { LinkCheckResult } from '~~/types/links'
 import type { VideoScoreResult } from '~~/utils/videoScore'
 import { formatViews, formatDate } from '~~/utils/format'
+import { useTier } from '~~/composables/useTier'
 
 definePageMeta({
   middleware: 'auth',
@@ -107,13 +123,14 @@ definePageMeta({
 
 const route = useRoute()
 const videoId = route.params.videoId as string
+const { tier: tierRef } = useTier()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 const data = ref<{
   video: VideoDetails
   linkResults: LinkCheckResult[]
-  score: VideoScoreResult
+  score: VideoScoreResult | null
 } | null>(null)
 const thumbnailError = ref(false)
 
@@ -135,7 +152,7 @@ const fetchVideo = async (forceRefresh = false) => {
   error.value = null
   try {
     const url = forceRefresh ? `/api/video/${videoId}?refresh=1` : `/api/video/${videoId}`
-    const res = await $fetch<{ video: VideoDetails; linkResults: LinkCheckResult[]; score: VideoScoreResult }>(url)
+    const res = await $fetch<{ video: VideoDetails; linkResults: LinkCheckResult[]; score: VideoScoreResult | null }>(url)
     data.value = res
   } catch (e: unknown) {
     const err = e as { data?: { message?: string }; statusCode?: number }

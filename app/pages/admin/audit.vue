@@ -64,6 +64,7 @@
           :videos="store.videos"
           :link-results-ref="storeToRefs(store).linkResults"
           :highlight-video-id="route.query.videoId as string | undefined"
+          tier="pro"
         />
         </ErrorBoundary>
       </div>

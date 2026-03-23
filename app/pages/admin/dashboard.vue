@@ -63,6 +63,7 @@
 
       <template v-else-if="store.hasVideos">
         <DashboardContent
+          tier="pro"
           :videos="store.videos"
           :link-results="store.linkResults"
           :high-intent-comments="store.highIntentComments"
